@@ -1,0 +1,18 @@
+{
+    "undef"    : true,
+    "unused"   : "vars",
+    "latedef"  : true,
+    "newcap"   : true,
+    "noarg"    : true,
+    "noempty"  : true,
+    "quotmark" : false,
+    "trailing" : true,
+    "browser"  : true,
+    "forin"    : false,
+    "onevar"   : false,
+    "noempty"  : true,
+    "globals"  : {
+        "console"  : true,
+        "Animator" : true
+    }
+}

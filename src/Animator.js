@@ -1,9 +1,11 @@
 (function(global){
 
-var Animator, _typeOf, _toStringRegex, _isElementRegex, _requestAnimationFrame, _performance, _nowOffset;
+var Animator, Internal, _typeOf, _toStringRegex, _isElementRegex,
+	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex;
 
 _toStringRegex  = /(\[object\ |\])/g;
 _isElementRegex = /html[\w]*element/;
+_startsWithRegex = /^_/;
 
 // Simple typeOf checker
 _typeOf = function(toTest){
@@ -75,18 +77,310 @@ if (!Function.prototype.bind) {
 	};
 }
 
+Internal = {
+
+	isRunning: false,
+
+	_index: 0,
+
+	elements  : {},
+	animating : [],
+
+	add: function(anim){
+		this.animations.push();
+	},
+
+	start: function(){
+		if (this.isRunning) {
+			return;
+		}
+
+		this.isRunning = true;
+
+		_requestAnimationFrame(this.run);
+	},
+
+	run: function(){
+		var animating = Internal.animating,
+			toRemove = [],
+			a, len, anims, now, done, index;
+
+		if (Internal.isRunning) {
+			_requestAnimationFrame(Internal.run);
+		} else {
+			return;
+		}
+
+		now = _performance.now();
+
+		for (a = 0, len = animating.length; a < len; a++) {
+			anims = Internal.elements[animating[a]];
+			if (anims[0].type === 'tween' && !anims[0].paused) {
+				done = Internal.updateTween(anims.element, anims[0], now);
+				if (done) {
+					anims.shift();
+				}
+
+				if (done && !anims.length) {
+					toRemove.push(animating[a]);
+				}
+			}
+		}
+
+		if (toRemove.length) {
+			for (a = 0, len = toRemove.length; a < len; a++) {
+				Internal.elements[toRemove[a]] = undefined;
+				index = animating.indexOf(toRemove[a]);
+				if (index >= 0) {
+					animating.splice(index, 1);
+				}
+			}
+		}
+	},
+
+	updateTween: function(element, tween, now){
+		var delta, prop, timing, value, unit;
+
+		if (!tween.start) {
+			tween.start = now;
+		}
+
+		delta = now - tween.start;
+
+		if (tween.delay && tween.delay > delta) {
+			return;
+		}
+
+		if (tween.delay) {
+			delta -= tween.delay;
+		}
+
+		timing = tween.from.timing || Animator.TWEENS.LINEAR;
+
+		for (prop in tween.from) {
+			if (prop.match(_startsWithRegex)) {
+				continue;
+			}
+
+			unit = '';
+
+			value = timing(
+				delta,
+				tween.from[prop],
+				tween.to[prop] - tween.from[prop],
+				tween.duration
+			);
+
+			if (tween.from['_' + prop + 'Unit']) {
+				unit = tween.from['_' + prop + 'Unit'];
+			} else if (prop !== 'opacity') {
+				unit = 'px';
+			}
+
+			element.style[prop] = value + unit;
+		}
+
+		if (delta > tween.duration) {
+			return true;
+		} else {
+			return false;
+		}
+	},
+
+	updateSpring: function(element, spring){
+	}
+};
+
 Animator = function(){
 	this._animations = {};
-	this._springs    = {};
 };
 
 Animator.prototype = {
-	isRunning: false,
+	animate: function(element, animation, duration){
+		var id, tweens;
 
-	createAnimation: function(name, keyframes){
+		if (_typeOf(element) === 'string') {
+			element = document.getElementById(element);
+		}
+
+		if (_typeOf(element) !== 'element') {
+			throw new Error('Animator.animate: Must provide a valid element to animate: ' + element);
+		}
+
+		duration = duration || 1000;
+
+		id = 'anim' + Internal._index++;
+
+		tweens = [];
+
+		this.keyframesToTweens(
+			this._animations[animation],
+			duration,
+			tweens
+		);
+
+		tweens.element = element;
+		Internal.elements[id] = tweens;
+		Internal.animating.push(id);
+		Internal.start();
 	},
 
-	creatSpring: function(name, physics){
+	keyframesToTweens: function(animation, duration, tweens){
+		var from, to, fromPercent, toPercent, percent, tween;
+
+		for (percent in animation) {
+			if (!animation.hasOwnProperty(percent)) {
+				continue;
+			}
+
+			if (!from) {
+				from = animation[percent];
+				fromPercent = parseFloat(percent) / 100;
+				continue;
+			}
+			to = animation[percent];
+			toPercent = parseFloat(percent) / 100;
+
+			tween = {
+				type: 'tween',
+				from: from,
+				to: to,
+				duration: ((duration * toPercent) - (duration * fromPercent)) >> 0
+			};
+
+			tweens.push(tween);
+
+			from = to;
+			fromPercent = toPercent;
+		}
+
+		to   = undefined;
+		from = undefined;
+		fromPercent = undefined;
+		toPercent   = undefined;
+	},
+
+	addKeyframes: function(name, keyframes){
+		if (
+			_typeOf(name)      === 'string' &&
+			_typeOf(keyframes) === 'object'
+		) {
+			this._animations[name] = keyframes;
+		}
+		return this;
+	},
+
+	addSpring: function(name, physics){
+		return this;
+	}
+};
+
+Animator.TWEENS = {
+
+	LINEAR: function (t, b, c, d) {
+		return c * t / d + b;
+	},
+
+	EASE_IN_SINE: function (t, b, c, d) {
+		return c * (1 - Math.cos(t / d * (Math.PI / 2))) + b;
+	},
+
+	EASE_OUT_SINE: function (t, b, c, d) {
+		return c * Math.sin(t / d * (Math.PI / 2)) + b;
+	},
+
+	EASE_IN_OUT_SINE: function (t, b, c, d) {
+		return c / 2 * (1 - Math.cos(Math.PI * t / d)) + b;
+	},
+
+	EASE_IN_QUAD: function (t, b, c, d) {
+		return c * (t /= d) * t + b;
+	},
+
+	EASE_OUT_QUAD: function (t, b, c, d) {
+		return -c * (t /= d) * (t - 2) + b;
+	},
+
+	EASE_IN_OUT_QUAD: function (t, b, c, d) {
+		if ((t /= d / 2) < 1) {
+			return c / 2 * t * t + b;
+		}
+		return -c / 2 * ((--t) * (t - 2) - 1) + b;
+	},
+
+	EASE_IN_CIRC: function (t, b, c, d) {
+		return c * (1 - Math.sqrt(1 - (t /= d) * t)) + b;
+	},
+
+	EASE_OUT_CIRC: function (t, b, c, d) {
+		return c * Math.sqrt(1 - (t = t / d - 1) * t) + b;
+	},
+
+	EASE_IN_OUT_CIRC: function (t, b, c, d) {
+		if ((t /= d / 2) < 1) {
+			return c / 2 * (1 - Math.sqrt(1 - t * t)) + b;
+		}
+		return c / 2 * (Math.sqrt(1 - (t -= 2) * t) + 1) + b;
+	},
+
+	EASE_IN_EXPO: function (t, b, c, d) {
+		return c * Math.pow(2, 10 * (t / d - 1)) + b;
+	},
+
+	EASE_OUT_EXPO: function (t, b, c, d) {
+		return c * (-Math.pow(2, -10 * t / d) + 1) + b;
+	},
+
+	EASE_IN_OUT_EXPO: function (t, b, c, d) {
+		if ((t /= d / 2) < 1) {
+			return c / 2 * Math.pow(2, 10 * (t - 1)) + b;
+		}
+		return c / 2 * (-Math.pow(2, -10 * --t) + 2) + b;
+	},
+
+	EASE_IN_QUINT: function (t, b, c, d) {
+		return c * Math.pow (t / d, 5) + b;
+	},
+
+	EASE_OUT_QUINT: function (t, b, c, d) {
+		return c * (Math.pow (t / d - 1, 5) + 1) + b;
+	},
+
+	EASE_IN_OUT_QUINT: function (t, b, c, d) {
+		if ((t /= d / 2) < 1) {
+			return c / 2 * Math.pow (t, 5) + b;
+		}
+		return c / 2 * (Math.pow (t -2, 5) + 2) + b;
+	},
+
+	EASE_IN_QUART: function (t, b, c, d) {
+		return c * Math.pow (t / d, 4) + b;
+	},
+
+	EASE_OUT_QUART: function (t, b, c, d) {
+		return -c * (Math.pow (t / d - 1, 4) - 1) + b;
+	},
+
+	EASE_IN_OUT_QUART: function (t, b, c, d) {
+		if ((t /= d / 2) < 1) {
+			return c / 2 * Math.pow (t, 4) + b;
+		}
+		return -c / 2 * (Math.pow (t - 2, 4) - 2) + b;
+	},
+
+	EASE_IN_CUBIC: function (t, b, c, d) {
+		return c * Math.pow (t / d, 3) + b;
+	},
+
+	EASE_OUT_CUBIC: function (t, b, c, d) {
+		return c * (Math.pow(t / d - 1, 3) + 1) + b;
+	},
+
+	EASE_IN_OUT_CUBIC: function (t, b, c, d) {
+		if ((t /= d / 2) < 1) {
+			return c / 2 * Math.pow (t, 3) + b;
+		}
+		return c / 2 * (Math.pow (t - 2, 3) + 2) + b;
 	}
 };
 

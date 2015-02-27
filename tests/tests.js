@@ -1,4 +1,4 @@
-// jshint unused:false
+// jshint ignore: start
 var Tween = {
 	element: 'form',
 	tween: [
@@ -26,32 +26,39 @@ var Keyframes = [
 		keyframes: {
 			0: {
 				opacity: 0,
+				top: 0,
+				_topUnit: '%',
 				transform: {
 					translate3d: [0,-100, 1]
 				},
-				timing: 'ease-out'
+				_timing: Animator.TWEENS.EASE_OUT_SINE,
 			},
 			40: {
 				opacity: 1,
+				top: 58,
+				_topUnit: '%',
 				transform: {
 					translate3d: [0,20,0]
 				},
-				timing: 'ease-in-out',
-				callback: function(){} // do something at this point in the animation
+				_timing: Animator.TWEENS.EASE_IN_OUT_SINE,
+				_callback: function(){} // do something at this point in the animation
 			},
 			70: {
 				opacity: 1,
+				top: 47,
+				_topUnit: '%',
 				transform: {
 					translate3d: [0,-10,0]
 				},
-				timing: 'ease-in-out',
+				_timing: Animator.TWEENS.EASE_IN_OUT_SINE,
 			},
 			100: {
 				opacity: 1,
+				top: 50,
+				_topUnit: '%',
 				transform: {
 					translate3d: [0,0,0]
-				},
-				timing: 'ease-in-out'
+				}
 			}
 		}
 	}
@@ -68,5 +75,7 @@ var Spring = {
 	}
 };
 
-// var manager = new Animator();
-// manager.animate()
+var animator = new Animator();
+animator
+	.addKeyframes('popin', Keyframes[0].keyframes)
+	.animate('animate', 'popin', 300);
