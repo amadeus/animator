@@ -1,7 +1,7 @@
 {
   "name": "Animator",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.1.0",
+  "description": "Das Ah-knee-may-tor",
   "main": "Animator.js",
   "dependencies": {
     "connect": "^3.3.4",
@@ -10,7 +10,7 @@
   },
   "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "grunt serve"
   },
   "author": "Amadeus Demarzi <amadeusdemarzi@gmail.com> (http://amadeusamade.us)",
   "license": "MIT"
