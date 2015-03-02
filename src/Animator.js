@@ -1,11 +1,12 @@
 (function(global){
 
 var Animator, Internal, _typeOf, _toStringRegex, _isElementRegex,
-	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex;
+	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex, _unitRegex;
 
 _toStringRegex  = /(\[object\ |\])/g;
 _isElementRegex = /html[\w]*element/;
 _startsWithRegex = /^_/;
+_unitRegex = /^[-0-9]+/;
 
 // Simple typeOf checker
 _typeOf = function(toTest){
@@ -139,7 +140,7 @@ Internal = {
 	},
 
 	updateTween: function(element, tween, now){
-		var delta, prop, timing, value, unit;
+		var delta, prop, timing, value;
 
 		if (!tween.start) {
 			tween.start = now;
@@ -155,29 +156,21 @@ Internal = {
 			delta -= tween.delay;
 		}
 
-		timing = tween.from.timing || Animator.TWEENS.LINEAR;
+		timing = tween.from._timing || Animator.TWEENS.LINEAR;
 
 		for (prop in tween.from) {
 			if (prop.match(_startsWithRegex)) {
 				continue;
 			}
 
-			unit = '';
-
 			value = timing(
 				delta,
-				tween.from[prop],
-				tween.to[prop] - tween.from[prop],
+				tween.from[prop][0],
+				tween.to[prop][0] - tween.from[prop][0],
 				tween.duration
 			);
 
-			if (tween.from['_' + prop + 'Unit']) {
-				unit = tween.from['_' + prop + 'Unit'];
-			} else if (prop !== 'opacity') {
-				unit = 'px';
-			}
-
-			element.style[prop] = value + unit;
+			element.style[prop] = value + (tween.from[prop][1] || '');
 		}
 
 		if (delta > tween.duration) {
@@ -242,10 +235,10 @@ Animator.prototype = {
 			toPercent = parseFloat(percent) / 100;
 
 			tween = {
-				type: 'tween',
-				from: from,
-				to: to,
-				duration: ((duration * toPercent) - (duration * fromPercent)) >> 0
+				type     : 'tween',
+				from     : from,
+				to       : to,
+				duration : ((duration * toPercent) - (duration * fromPercent)) >> 0
 			};
 
 			tweens.push(tween);
@@ -260,13 +253,50 @@ Animator.prototype = {
 		toPercent   = undefined;
 	},
 
-	addKeyframes: function(name, keyframes){
-		if (
-			_typeOf(name)      === 'string' &&
-			_typeOf(keyframes) === 'object'
-		) {
-			this._animations[name] = keyframes;
+	convertFrame: function(frame){
+		var key, value, unit;
+
+		if (_typeOf(frame) !== 'object') {
+			return frame;
 		}
+
+		for (key in frame) {
+			if (!frame.hasOwnProperty(key)) {
+				continue;
+			}
+			value = parseFloat(frame[key]);
+			if (isNaN(value)) {
+				continue;
+			}
+			if (_typeOf(frame[key]) === 'string') {
+				unit = frame[key].replace(_unitRegex, '');
+			}
+			frame[key] = [value];
+			if (unit) {
+				frame[key][1] = unit;
+			}
+			unit = undefined;
+		}
+
+		return frame;
+	},
+
+	addKeyframes: function(name, keyframes){
+		var frame;
+
+		if (
+			_typeOf(name)      !== 'string' ||
+			_typeOf(keyframes) !== 'object'
+		) {
+			return this;
+		}
+
+		for (frame in keyframes) {
+			keyframes[frame] = this.convertFrame(keyframes[frame]);
+		}
+
+		this._animations[name] = keyframes;
+
 		return this;
 	},
 

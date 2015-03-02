@@ -26,8 +26,7 @@ var Keyframes = [
 		keyframes: {
 			0: {
 				opacity: 0,
-				top: 0,
-				_topUnit: '%',
+				top: '0%',
 				transform: {
 					translate3d: [0,-100, 1]
 				},
@@ -35,8 +34,7 @@ var Keyframes = [
 			},
 			40: {
 				opacity: 1,
-				top: 58,
-				_topUnit: '%',
+				top: '58%',
 				transform: {
 					translate3d: [0,20,0]
 				},
@@ -45,8 +43,7 @@ var Keyframes = [
 			},
 			70: {
 				opacity: 1,
-				top: 47,
-				_topUnit: '%',
+				top: '48%',
 				transform: {
 					translate3d: [0,-10,0]
 				},
@@ -54,8 +51,7 @@ var Keyframes = [
 			},
 			100: {
 				opacity: 1,
-				top: 50,
-				_topUnit: '%',
+				top: '50%',
 				transform: {
 					translate3d: [0,0,0]
 				}
