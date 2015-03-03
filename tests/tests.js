@@ -113,6 +113,10 @@ durationSlider.addEventListener('input', function(){
 	duration.value = durationSlider.value;
 }, false);
 
+duration.addEventListener('change', function(){
+	durationSlider.value = duration.value;
+}, false);
+
 form.addEventListener('submit', function(event){
 	event.preventDefault();
 	var dur = parseFloat(duration.value);
