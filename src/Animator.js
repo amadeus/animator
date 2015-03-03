@@ -90,15 +90,19 @@ Internal = {
 	toRemove  : [],
 
 	addTweens: function(element, tweens){
-		var id;
+		var id, previousTweens;
 
+		// Element is currently animating
 		if (element._animatorID) {
 			id = element._animatorID;
-		} else {
-			id = element._animatorID = 'anim-' + this._index++;
+			previousTweens = this.elements[id];
+			this.elements[id] = previousTweens.concat.apply(this.elements[id], tweens);
+			this.elements[id].element = element;
+			return;
 		}
 
 		tweens.element = element;
+		id = element._animatorID = 'anim-' + this._index++;
 		this.elements[id] = tweens;
 		this.animating.push(id);
 		this.start();
@@ -117,7 +121,7 @@ Internal = {
 	run: function(){
 		var animating = Internal.animating,
 			toRemove = Internal.toRemove,
-			a, len, anims, now, done, index;
+			a, len, anims, now, done, index, id;
 
 		if (Internal.isRunning) {
 			_requestAnimationFrame(Internal.run);
@@ -146,9 +150,10 @@ Internal = {
 
 		if (toRemove.length) {
 			for (a = 0, len = toRemove.length; a < len; a++) {
-				Internal.elements[toRemove[a]]._animatorID = undefined;
-				Internal.elements[toRemove[a]] = undefined;
-				index = animating.indexOf(toRemove[a]);
+				id = toRemove[a];
+				Internal.elements[id].element._animatorID = undefined;
+				Internal.elements[id] = undefined;
+				index = animating.indexOf(id);
 				if (index >= 0) {
 					animating.splice(index, 1);
 				}
