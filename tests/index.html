@@ -21,9 +21,40 @@
 			width:100px;
 			height:100px
 		}
+
+		.tools {
+			position:fixed;
+			top:0;
+			left:0;
+			right:0;
+			padding:10px;
+			background-color:rgba(0,0,0,0.1);
+			overflow:hidden;
+		}
+
+		.tools * {
+			display:block;
+			float:left;
+			margin-right:10px !important;;
+		}
+
+		.tools select {
+			margin:0;
+			width:100px;
+		}
+
+		.tools input {
+			margin:0;
+			outline:none;
+		}
 	</style>
 </head>
 <body>
+	<form method="post" class="tools" id="form">
+		<select id="animations"></select>
+		<input id="duration" value="600" />
+		<button id="trigger" type="submit">Start Animation</button>
+	</form>
 	<div class="to-animate" id="animate"></div>
 	<script src="/src/Animator.js" type="text/javascript"></script>
 	<script src="/tests/tests.js" type="text/javascript"></script>
