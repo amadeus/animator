@@ -84,6 +84,7 @@ Internal = {
 	isRunning: false,
 
 	_index: 0,
+	_last: undefined,
 
 	elements  : {},
 	animating : [],
@@ -121,7 +122,7 @@ Internal = {
 	run: function(){
 		var animating = Internal.animating,
 			toRemove = Internal.toRemove,
-			a, len, anims, now, done, index, id;
+			a, len, anims, now, done, index, id, tick;
 
 		if (Internal.isRunning) {
 			_requestAnimationFrame(Internal.run);
@@ -131,10 +132,16 @@ Internal = {
 
 		now = _performance.now();
 
+		if (Internal._last === undefined) {
+			Internal._last = now;
+		}
+
+		tick = now - Internal._last;
+
 		for (a = 0, len = animating.length; a < len; a++) {
 			anims = Internal.elements[animating[a]];
 			if (anims[0].type === 'tween' && !anims[0].paused) {
-				done = Internal.updateTween(anims.element, anims[0], now);
+				done = Internal.updateTween(anims.element, anims[0], tick);
 				if (done) {
 					if (anims[0].to._callback) {
 						anims[0].to._callback();
@@ -159,30 +166,34 @@ Internal = {
 				}
 			}
 
+			// No need to run anymore
 			if (!animating.length) {
+				Internal._last = undefined;
 				Internal.isRunning = false;
 			}
 
 			// Clean out the array
 			toRemove.length = 0;
 		}
+
+		Internal._last = now;
 	},
 
-	updateTween: function(element, tween, now){
+	updateTween: function(element, tween, tick){
 		var delta, prop, timing, value;
 
-		if (!tween.start) {
-			tween.start = now;
+		if (tween.delta === undefined) {
+			tween.delta = 0;
+		} else {
+			tween.delta += tick;
 		}
 
-		delta = now - tween.start;
-
-		if (tween.delay && tween.delay > delta) {
-			return;
-		}
-
-		if (tween.delay) {
-			delta -= tween.delay;
+		if (tween.delay && tween.delay > tween.delta) {
+			return false;
+		} else if (tween.delay) {
+			delta = tween.delta - tween.delay;
+		} else {
+			delta = tween.delta;
 		}
 
 		timing = tween.from._timing || Animator.TWEENS.LINEAR;
