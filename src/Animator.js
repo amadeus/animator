@@ -158,6 +158,11 @@ Internal = {
 					animating.splice(index, 1);
 				}
 			}
+
+			if (!animating.length) {
+				Internal.isRunning = false;
+			}
+
 			// Clean out the array
 			toRemove.length = 0;
 		}
