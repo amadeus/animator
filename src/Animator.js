@@ -87,9 +87,21 @@ Internal = {
 
 	elements  : {},
 	animating : [],
+	toRemove  : [],
 
-	add: function(anim){
-		this.animations.push();
+	addTweens: function(element, tweens){
+		var id;
+
+		if (element._animatorID) {
+			id = element._animatorID;
+		} else {
+			id = element._animatorID = 'anim-' + this._index++;
+		}
+
+		tweens.element = element;
+		this.elements[id] = tweens;
+		this.animating.push(id);
+		this.start();
 	},
 
 	start: function(){
@@ -104,7 +116,7 @@ Internal = {
 
 	run: function(){
 		var animating = Internal.animating,
-			toRemove = [],
+			toRemove = Internal.toRemove,
 			a, len, anims, now, done, index;
 
 		if (Internal.isRunning) {
@@ -134,12 +146,15 @@ Internal = {
 
 		if (toRemove.length) {
 			for (a = 0, len = toRemove.length; a < len; a++) {
+				Internal.elements[toRemove[a]]._animatorID = undefined;
 				Internal.elements[toRemove[a]] = undefined;
 				index = animating.indexOf(toRemove[a]);
 				if (index >= 0) {
 					animating.splice(index, 1);
 				}
 			}
+			// Clean out the array
+			toRemove.length = 0;
 		}
 	},
 
@@ -236,8 +251,32 @@ Animator = function(){
 
 Animator.prototype = {
 
-	animate: function(element, animation, duration){
-		var id, tweens;
+	addKeyframes: function(name, keyframes){
+		var frame, previousFrame;
+
+		if (
+			_typeOf(name)      !== 'string' ||
+			_typeOf(keyframes) !== 'object'
+		) {
+			return this;
+		}
+
+		for (frame in keyframes) {
+			keyframes[frame] = this._convertFrame(keyframes[frame], previousFrame);
+			previousFrame = keyframes[frame];
+		}
+
+		this._animations[name] = keyframes;
+
+		return this;
+	},
+
+	addSpring: function(name, physics){
+		return this;
+	},
+
+	startAnimation: function(element, animation, duration){
+		var tweens;
 
 		if (_typeOf(element) === 'string') {
 			element = document.getElementById(element);
@@ -249,24 +288,19 @@ Animator.prototype = {
 
 		duration = duration || 1000;
 
-		id = 'anim' + Internal._index++;
-
-		tweens = [];
-
-		this.keyframesToTweens(
+		tweens = this._keyframesToTweens(
 			this._animations[animation],
-			duration,
-			tweens
+			duration
 		);
 
-		tweens.element = element;
-		Internal.elements[id] = tweens;
-		Internal.animating.push(id);
-		Internal.start();
+		Internal.addTweens(element, tweens);
+
+		return this;
 	},
 
-	keyframesToTweens: function(animation, duration, tweens){
-		var from, to, fromPercent, toPercent, percent, tween;
+	_keyframesToTweens: function(animation, duration){
+		var tweens = [],
+			from, to, fromPercent, toPercent, percent, tween;
 
 		for (percent in animation) {
 			if (!animation.hasOwnProperty(percent)) {
@@ -298,9 +332,11 @@ Animator.prototype = {
 		from = undefined;
 		fromPercent = undefined;
 		toPercent   = undefined;
+
+		return tweens;
 	},
 
-	convertFrame: function(frame, previousFrame){
+	_convertFrame: function(frame, previousFrame){
 		var key, timingKey;
 
 		if (_typeOf(frame) !== 'object') {
@@ -316,9 +352,9 @@ Animator.prototype = {
 				timingKey = frame[key].toUpperCase().replace(_timingRegex, '_');
 				frame[key] = Animator.TWEENS[timingKey];
 			} else if (key === 'transform') {
-				frame[key] = this.convertTransform(frame[key]);
+				frame[key] = this._convertTransform(frame[key]);
 			} else {
-				frame[key] = this.getValueAndUnit(frame[key], key);
+				frame[key] = this._getValueAndUnit(frame[key], key);
 			}
 		}
 
@@ -336,7 +372,7 @@ Animator.prototype = {
 		return frame;
 	},
 
-	convertTransform: function(transform){
+	_convertTransform: function(transform){
 		var key, value, i, len;
 
 		for (key in transform) {
@@ -345,14 +381,14 @@ Animator.prototype = {
 				transform[key] = value = [value];
 			}
 			for (i = 0, len = value.length; i < len; i++) {
-				value[i] = this.getValueAndUnit(value[i], key);
+				value[i] = this._getValueAndUnit(value[i], key);
 			}
 		}
 
 		return transform;
 	},
 
-	getValueAndUnit: function(item, prop){
+	_getValueAndUnit: function(item, prop){
 		var value, unit, newValue;
 
 		if (
@@ -378,30 +414,6 @@ Animator.prototype = {
 		}
 
 		return newValue;
-	},
-
-	addKeyframes: function(name, keyframes){
-		var frame, previousFrame;
-
-		if (
-			_typeOf(name)      !== 'string' ||
-			_typeOf(keyframes) !== 'object'
-		) {
-			return this;
-		}
-
-		for (frame in keyframes) {
-			keyframes[frame] = this.convertFrame(keyframes[frame], previousFrame);
-			previousFrame = keyframes[frame];
-		}
-
-		this._animations[name] = keyframes;
-
-		return this;
-	},
-
-	addSpring: function(name, physics){
-		return this;
 	}
 
 };
@@ -533,8 +545,8 @@ Animator.TWEENS = {
 };
 
 // CSS Animation shortcuts...
-Animator.TWEENS.EASE_IN = Animator.TWEENS.EASE_IN_SINE;
-Animator.TWEENS.EASE_OUT = Animator.TWEENS.EASE_OUT_SINE;
+Animator.TWEENS.EASE_IN     = Animator.TWEENS.EASE_IN_SINE;
+Animator.TWEENS.EASE_OUT    = Animator.TWEENS.EASE_OUT_SINE;
 Animator.TWEENS.EASE_IN_OUT = Animator.TWEENS.EASE_IN_OUT_SINE;
 
 global.Animator = Animator;

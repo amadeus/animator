@@ -121,9 +121,9 @@ form.addEventListener('submit', function(event){
 	event.preventDefault();
 	var dur = parseFloat(duration.value);
 	if (!dur) {
-		dur = duration.value = 600;
+		dur = duration.value = 380;
 	}
-	animator.animate(
+	animator.startAnimation(
 		'animate',
 		select.value,
 		dur
