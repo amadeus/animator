@@ -120,6 +120,9 @@ Internal = {
 			if (anims[0].type === 'tween' && !anims[0].paused) {
 				done = Internal.updateTween(anims.element, anims[0], now);
 				if (done) {
+					if (anims[0].to._callback) {
+						anims[0].to._callback();
+					}
 					anims.shift();
 				}
 
@@ -321,7 +324,10 @@ Animator.prototype = {
 
 		if (previousFrame) {
 			for (key in previousFrame) {
-				if (!frame[key]) {
+				if (
+					!key.match(_startsWithRegex) &&
+					!frame[key]
+				) {
 					frame[key] = previousFrame[key];
 				}
 			}
