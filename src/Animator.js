@@ -303,6 +303,20 @@ Animator.prototype = {
 		return this;
 	},
 
+	clearTweenQueue: function(element){
+		if (_typeOf(element) === 'string') {
+			element = document.getElementById(element);
+		}
+
+		if (!element || !element._animatorID) {
+			return this;
+		}
+
+		Internal.toRemove.push(element._animatorID);
+
+		return this;
+	},
+
 	_keyframesToTweens: function(animation, duration){
 		var tweens = [],
 			from, to, fromPercent, toPercent, percent, tween;

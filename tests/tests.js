@@ -99,6 +99,7 @@ var animator = new Animator(),
 	select = document.getElementById('animations'),
 	duration = document.getElementById('duration'),
 	durationSlider = document.getElementById('duration-slider'),
+	clearQueue = document.getElementById('clear-trigger'),
 	option;
 
 for (var name in Animations) {
@@ -129,3 +130,8 @@ form.addEventListener('submit', function(event){
 		dur
 	);
 }, false);
+
+clearQueue.addEventListener('click', function(event){
+	event.preventDefault();
+	animator.clearTweenQueue('animate');
+});
