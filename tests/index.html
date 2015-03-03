@@ -47,12 +47,17 @@
 			margin:0;
 			outline:none;
 		}
+
+		.tools input[type=text] {
+			width:40px;
+		}
 	</style>
 </head>
 <body>
 	<form method="post" class="tools" id="form">
 		<select id="animations"></select>
-		<input id="duration" value="600" />
+		<input id="duration" value="600" type="text" />
+		<input type="range" id="duration-slider" min="10" value="600" max="2000" step="50" />
 		<button id="trigger" type="submit">Start Animation</button>
 	</form>
 	<div class="to-animate" id="animate"></div>

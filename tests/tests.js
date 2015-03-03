@@ -61,17 +61,23 @@ var Animations = {
 			transform: {
 				scale: [1.05, 1.1]
 			},
-			_timing: 'ease-out'
+			_timing: 'ease-in-out',
+			_callback: function(){
+				console.log('In the middle of the animation');
+			}
 		},
 		70: {
 			transform: {
 				scale: [0.98, 0.98]
 			},
-			_timing:'ease-out'
+			_timing:'ease-in-out'
 		},
 		100: {
 			transform: {
 				scale: [1, 1]
+			},
+			_callback: function(){
+				console.log('Animation is done');
 			}
 		}
 	}
@@ -92,6 +98,7 @@ var animator = new Animator(),
 	form = document.getElementById('form'),
 	select = document.getElementById('animations'),
 	duration = document.getElementById('duration'),
+	durationSlider = document.getElementById('duration-slider'),
 	option;
 
 for (var name in Animations) {
@@ -101,6 +108,10 @@ for (var name in Animations) {
 	option.value = name;
 	select.appendChild(option);
 }
+
+durationSlider.addEventListener('input', function(){
+	duration.value = durationSlider.value;
+}, false);
 
 form.addEventListener('submit', function(event){
 	event.preventDefault();
