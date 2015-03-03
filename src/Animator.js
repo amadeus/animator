@@ -121,8 +121,29 @@ Internal = {
 
 	run: function(){
 		var animating = Internal.animating,
-			toRemove = Internal.toRemove,
+			toRemove  = Internal.toRemove,
 			a, len, anims, now, done, index, id, tick;
+
+		if (toRemove.length) {
+			for (a = 0, len = toRemove.length; a < len; a++) {
+				id = toRemove[a];
+				Internal.elements[id].element._animatorID = undefined;
+				Internal.elements[id] = undefined;
+				index = animating.indexOf(id);
+				if (index >= 0) {
+					animating.splice(index, 1);
+				}
+			}
+
+			// No need to run anymore
+			if (!animating.length) {
+				Internal._last = undefined;
+				Internal.isRunning = false;
+			}
+
+			// Clean out the array
+			toRemove.length = 0;
+		}
 
 		if (Internal.isRunning) {
 			_requestAnimationFrame(Internal.run);
@@ -153,27 +174,6 @@ Internal = {
 					toRemove.push(animating[a]);
 				}
 			}
-		}
-
-		if (toRemove.length) {
-			for (a = 0, len = toRemove.length; a < len; a++) {
-				id = toRemove[a];
-				Internal.elements[id].element._animatorID = undefined;
-				Internal.elements[id] = undefined;
-				index = animating.indexOf(id);
-				if (index >= 0) {
-					animating.splice(index, 1);
-				}
-			}
-
-			// No need to run anymore
-			if (!animating.length) {
-				Internal._last = undefined;
-				Internal.isRunning = false;
-			}
-
-			// Clean out the array
-			toRemove.length = 0;
 		}
 
 		Internal._last = now;

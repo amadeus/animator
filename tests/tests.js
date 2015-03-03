@@ -135,6 +135,10 @@ form.addEventListener('submit', function(event){
 clearQueue.addEventListener('click', function(event){
 	event.preventDefault();
 	animator.clearTweenQueue('animate');
+	// Clear out all styles from the animation
+	var element = document.getElementById('animate');
+	element.setAttribute('style', '');
+	element.className = 'to-animate';
 });
 
 pauseResume.addEventListener('click', function(event){
