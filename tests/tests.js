@@ -100,6 +100,7 @@ var animator = new Animator(),
 	duration = document.getElementById('duration'),
 	durationSlider = document.getElementById('duration-slider'),
 	clearQueue = document.getElementById('clear-trigger'),
+	pauseResume = document.getElementById('pause-trigger'),
 	option;
 
 for (var name in Animations) {
@@ -135,3 +136,20 @@ clearQueue.addEventListener('click', function(event){
 	event.preventDefault();
 	animator.clearTweenQueue('animate');
 });
+
+pauseResume.addEventListener('click', function(event){
+	event.preventDefault();
+
+	var tween = animator.getCurrentAnimation('animate');
+
+	if (!tween) {
+		return console.log('No animation in progress to pause or resume');
+	}
+
+	if (tween.paused) {
+		animator.resumeAnimation('animate');
+	} else {
+		animator.pauseAnimation('animate');
+	}
+
+}, false)

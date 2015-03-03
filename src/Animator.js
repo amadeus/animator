@@ -333,6 +333,46 @@ Animator.prototype = {
 		return this;
 	},
 
+	pauseAnimation: function(element){
+		if (_typeOf(element) === 'string') {
+			element = document.getElementById(element);
+		}
+
+		if (!element && !element._animatorID) {
+			return this;
+		}
+
+		Internal.elements[element._animatorID][0].paused = true;
+
+		return this;
+	},
+
+	resumeAnimation: function(element){
+		if (_typeOf(element) === 'string') {
+			element = document.getElementById(element);
+		}
+
+		if (!element && !element._animatorID) {
+			return this;
+		}
+
+		Internal.elements[element._animatorID][0].paused = false;
+
+		return this;
+	},
+
+	getCurrentAnimation: function(element){
+		if (_typeOf(element) === 'string') {
+			element = document.getElementById(element);
+		}
+
+		if (!element || !element._animatorID) {
+			return null;
+		}
+
+		return Internal.elements[element._animatorID][0];
+	},
+
 	_keyframesToTweens: function(animation, duration){
 		var tweens = [],
 			from, to, fromPercent, toPercent, percent, tween;
