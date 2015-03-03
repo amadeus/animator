@@ -104,7 +104,7 @@ var animator = new Animator(),
 	option;
 
 for (var name in Animations) {
-	animator.addKeyframes(name, Animations[name]);
+	animator.addAnimation(name, Animations[name]);
 	option = document.createElement('option');
 	option.innerHTML = name;
 	option.value = name;
@@ -125,7 +125,7 @@ form.addEventListener('submit', function(event){
 	if (!dur) {
 		dur = duration.value = 380;
 	}
-	animator.startAnimation(
+	animator.animateElement(
 		'animate',
 		select.value,
 		dur
@@ -140,16 +140,20 @@ clearQueue.addEventListener('click', function(event){
 pauseResume.addEventListener('click', function(event){
 	event.preventDefault();
 
-	var tween = animator.getCurrentAnimation('animate');
+	var tween = animator.getCurrentAnimation('animate'),
+		element;
 
 	if (!tween) {
 		return console.log('No animation in progress to pause or resume');
 	}
 
+	element = document.getElementById('animate');
 	if (tween.paused) {
-		animator.resumeAnimation('animate');
+		animator.resumeElement(element);
+		element.className = 'to-animate';
 	} else {
-		animator.pauseAnimation('animate');
+		animator.pauseElement(element);
+		element.className = 'to-animate paused';
 	}
 
 }, false)

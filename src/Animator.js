@@ -272,7 +272,7 @@ Animator = function(){
 
 Animator.prototype = {
 
-	addKeyframes: function(name, keyframes){
+	addAnimation: function(name, keyframes){
 		var frame, previousFrame;
 
 		if (
@@ -292,11 +292,11 @@ Animator.prototype = {
 		return this;
 	},
 
-	addSpring: function(name, physics){
+	springElement: function(name, physics){
 		return this;
 	},
 
-	startAnimation: function(element, animation, duration){
+	animateElement: function(element, animation, duration){
 		var tweens;
 
 		if (_typeOf(element) === 'string') {
@@ -333,12 +333,12 @@ Animator.prototype = {
 		return this;
 	},
 
-	pauseAnimation: function(element){
+	pauseElement: function(element){
 		if (_typeOf(element) === 'string') {
 			element = document.getElementById(element);
 		}
 
-		if (!element && !element._animatorID) {
+		if (!element || !element._animatorID) {
 			return this;
 		}
 
@@ -347,7 +347,7 @@ Animator.prototype = {
 		return this;
 	},
 
-	resumeAnimation: function(element){
+	resumeElement: function(element){
 		if (_typeOf(element) === 'string') {
 			element = document.getElementById(element);
 		}
