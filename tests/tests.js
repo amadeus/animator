@@ -46,6 +46,34 @@ var Animations = {
 				translate3d: [0,0,0]
 			}
 		}
+	},
+
+	PopIn: {
+		0: {
+			opacity: 0,
+			transform: {
+				scale: [0, 0],
+			},
+			_timing: 'ease-out'
+		},
+		40: {
+			opacity: 1,
+			transform: {
+				scale: [1.05, 1.1]
+			},
+			_timing: 'ease-out'
+		},
+		70: {
+			transform: {
+				scale: [0.98, 0.98]
+			},
+			_timing:'ease-out'
+		},
+		100: {
+			transform: {
+				scale: [1, 1]
+			}
+		}
 	}
 };
 

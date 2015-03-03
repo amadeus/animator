@@ -1,12 +1,13 @@
 (function(global){
 
 var Animator, Internal, _typeOf, _toStringRegex, _isElementRegex,
-	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex, _unitRegex;
+	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex, _unitRegex, _timingRegex;
 
 _toStringRegex  = /(\[object\ |\])/g;
 _isElementRegex = /html[\w]*element/;
 _startsWithRegex = /^_/;
 _unitRegex = /^[-0-9]+/;
+_timingRegex = /-/g;
 
 // Simple typeOf checker
 _typeOf = function(toTest){
@@ -297,7 +298,7 @@ Animator.prototype = {
 	},
 
 	convertFrame: function(frame, previousFrame){
-		var key;
+		var key, timingKey;
 
 		if (_typeOf(frame) !== 'object') {
 			return frame;
@@ -308,7 +309,10 @@ Animator.prototype = {
 				continue;
 			}
 
-			if (key === 'transform') {
+			if (key === '_timing' && _typeOf(frame[key]) === 'string') {
+				timingKey = frame[key].toUpperCase().replace(_timingRegex, '_');
+				frame[key] = Animator.TWEENS[timingKey];
+			} else if (key === 'transform') {
 				frame[key] = this.convertTransform(frame[key]);
 			} else {
 				frame[key] = this.getValueAndUnit(frame[key], key);
@@ -521,6 +525,11 @@ Animator.TWEENS = {
 		return c / 2 * (Math.pow (t - 2, 3) + 2) + b;
 	}
 };
+
+// CSS Animation shortcuts...
+Animator.TWEENS.EASE_IN = Animator.TWEENS.EASE_IN_SINE;
+Animator.TWEENS.EASE_OUT = Animator.TWEENS.EASE_OUT_SINE;
+Animator.TWEENS.EASE_IN_OUT = Animator.TWEENS.EASE_IN_OUT_SINE;
 
 global.Animator = Animator;
 
