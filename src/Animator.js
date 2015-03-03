@@ -163,14 +163,26 @@ Internal = {
 				continue;
 			}
 
-			value = timing(
-				delta,
-				tween.from[prop][0],
-				tween.to[prop][0] - tween.from[prop][0],
-				tween.duration
-			);
+			if (prop === 'transform') {
+				value = Internal.calculateTransform(
+					tween.from[prop],
+					tween.to[prop],
+					timing,
+					delta,
+					tween.duration
+				);
 
-			element.style[prop] = value + (tween.from[prop][1] || '');
+				element.style[prop] = value;
+			} else {
+				value = timing(
+					delta,
+					tween.from[prop][0],
+					tween.to[prop][0] - tween.from[prop][0],
+					tween.duration
+				);
+
+				element.style[prop] = value + (tween.from[prop][1] || '');
+			}
 		}
 
 		if (delta > tween.duration) {
@@ -180,7 +192,37 @@ Internal = {
 		}
 	},
 
+	calculateTransform: function(from, to, timing, delta, duration){
+		var css = [], v, currentValues, item, prop;
+
+		for (prop in from) {
+			item = prop + '(';
+
+			currentValues = [];
+
+			for (v = 0; v < from[prop].length; v++) {
+				currentValues[v] = timing(
+					delta,
+					from[prop][v][0],
+					to[prop][v][0] - from[prop][v][0],
+					duration
+				);
+				if (from[prop][v][1]) {
+					currentValues[v] += from[prop][v][1];
+				}
+			}
+			item += currentValues.join(',');
+
+			item += ')';
+			css.push(item);
+		}
+
+		return css.join(' ');
+	},
+
 	updateSpring: function(element, spring){
+		console.log('Internal.updateSpring not yet implemented');
+		return false;
 	}
 };
 
@@ -189,6 +231,7 @@ Animator = function(){
 };
 
 Animator.prototype = {
+
 	animate: function(element, animation, duration){
 		var id, tweens;
 
@@ -253,8 +296,8 @@ Animator.prototype = {
 		toPercent   = undefined;
 	},
 
-	convertFrame: function(frame){
-		var key, value, unit;
+	convertFrame: function(frame, previousFrame){
+		var key;
 
 		if (_typeOf(frame) !== 'object') {
 			return frame;
@@ -264,25 +307,71 @@ Animator.prototype = {
 			if (!frame.hasOwnProperty(key)) {
 				continue;
 			}
-			value = parseFloat(frame[key]);
-			if (isNaN(value)) {
-				continue;
+
+			if (key === 'transform') {
+				frame[key] = this.convertTransform(frame[key]);
+			} else {
+				frame[key] = this.getValueAndUnit(frame[key], key);
 			}
-			if (_typeOf(frame[key]) === 'string') {
-				unit = frame[key].replace(_unitRegex, '');
+		}
+
+		if (previousFrame) {
+			for (key in previousFrame) {
+				if (!frame[key]) {
+					frame[key] = previousFrame[key];
+				}
 			}
-			frame[key] = [value];
-			if (unit) {
-				frame[key][1] = unit;
-			}
-			unit = undefined;
 		}
 
 		return frame;
 	},
 
+	convertTransform: function(transform){
+		var key, value, i, len;
+
+		for (key in transform) {
+			value = transform[key];
+			if (_typeOf(value) !== 'array') {
+				transform[key] = value = [value];
+			}
+			for (i = 0, len = value.length; i < len; i++) {
+				value[i] = this.getValueAndUnit(value[i], key);
+			}
+		}
+
+		return transform;
+	},
+
+	getValueAndUnit: function(item, prop){
+		var value, unit, newValue;
+
+		if (
+			_typeOf(item) === 'function' ||
+			_typeOf(item) === 'object'
+		) {
+			return item;
+		}
+
+		value = parseFloat(item);
+		if (isNaN(value)) {
+			return [item];
+		}
+
+		newValue = [value];
+		if (item && item.replace) {
+			unit = item.replace(_unitRegex, '');
+		}
+
+		// Only add a unit if it exists
+		if (unit || Animator.DEFAULT_UNITS[prop]) {
+			newValue[1] = unit || Animator.DEFAULT_UNITS[prop];
+		}
+
+		return newValue;
+	},
+
 	addKeyframes: function(name, keyframes){
-		var frame;
+		var frame, previousFrame;
 
 		if (
 			_typeOf(name)      !== 'string' ||
@@ -292,7 +381,8 @@ Animator.prototype = {
 		}
 
 		for (frame in keyframes) {
-			keyframes[frame] = this.convertFrame(keyframes[frame]);
+			keyframes[frame] = this.convertFrame(keyframes[frame], previousFrame);
+			previousFrame = keyframes[frame];
 		}
 
 		this._animations[name] = keyframes;
@@ -303,6 +393,24 @@ Animator.prototype = {
 	addSpring: function(name, physics){
 		return this;
 	}
+
+};
+
+Animator.DEFAULT_UNITS = {
+	translate3d : 'px',
+	translate   : 'px',
+	translateX  : 'px',
+	translateY  : 'px',
+	translateZ  : 'px',
+	perspective : 'px',
+
+	top    : 'px',
+	left   : 'px',
+	bottom : 'px',
+	right  : 'px',
+	height : 'px',
+	width  : 'px',
+	margin : 'px'
 };
 
 Animator.TWEENS = {

@@ -18,47 +18,34 @@ var Tween = {
 	]
 };
 
-var Keyframes = [
-	{
-		element: 'form',
-		duration: 2000,
-
-		keyframes: {
-			0: {
-				opacity: 0,
-				top: '0%',
-				transform: {
-					translate3d: [0,-100, 1]
-				},
-				_timing: Animator.TWEENS.EASE_OUT_SINE,
-			},
-			40: {
-				opacity: 1,
-				top: '58%',
-				transform: {
-					translate3d: [0,20,0]
-				},
-				_timing: Animator.TWEENS.EASE_IN_OUT_SINE,
-				_callback: function(){} // do something at this point in the animation
-			},
-			70: {
-				opacity: 1,
-				top: '48%',
-				transform: {
-					translate3d: [0,-10,0]
-				},
-				_timing: Animator.TWEENS.EASE_IN_OUT_SINE,
-			},
-			100: {
-				opacity: 1,
-				top: '50%',
-				transform: {
-					translate3d: [0,0,0]
-				}
-			}
+var SlideIn = {
+	0: {
+		opacity: 0,
+		transform: {
+			translate3d: [0,500, 0]
+		},
+		_timing: Animator.TWEENS.EASE_OUT_SINE,
+	},
+	40: {
+		opacity: 1,
+		transform: {
+			translate3d: [0,-60,0]
+		},
+		_timing: Animator.TWEENS.EASE_OUT_SINE,
+		_callback: function(){} // do something at this point in the animation
+	},
+	70: {
+		transform: {
+			translate3d: [0,20,0]
+		},
+		_timing: Animator.TWEENS.EASE_OUT_SINE,
+	},
+	100: {
+		transform: {
+			translate3d: [0,0,0]
 		}
 	}
-];
+};
 
 var Spring = {
 	element: 'form',
@@ -73,5 +60,5 @@ var Spring = {
 
 var animator = new Animator();
 animator
-	.addKeyframes('popin', Keyframes[0].keyframes)
-	.animate('animate', 'popin', 300);
+	.addKeyframes('slide-in', SlideIn)
+	.animate('animate', 'slide-in', 600);
