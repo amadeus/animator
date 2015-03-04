@@ -3,6 +3,17 @@
 A universal CSS animation class for controlling CSS animations, tweens and
 springs on individual html elements.  Or something
 
+
+## Demo
+
+```
+    npm install
+    grunt serve
+```
+
+Checkout the file `tests/tests.js` to see how the API is used
+
+
 ## Current Features
 
 * Keyframe Animation Support
@@ -17,6 +28,7 @@ springs on individual html elements.  Or something
 * Individual keyframe callback support
 * Keyframe animation support akin to CSS animation API
 * Utilizes requestAnimationFrame where possible
+
 
 ## Planned Features
 
