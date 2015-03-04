@@ -1,22 +1,5 @@
 // jshint ignore: start
-var Tween = {
-	element: 'form',
-	tween: [
-		{
-			duration: 2000,
-			callback: function(){
-				// these values have been reached
-			},
-			timing: 'ease-in-out',
-
-			top: 20,
-			transform: {
-				translate3d: [0,0,0],
-				scale: [0,0]
-			}
-		}
-	]
-};
+(function(){ 'use strict';
 
 var Animations = {
 	SlideIn: {
@@ -83,6 +66,28 @@ var Animations = {
 	}
 };
 
+// Currentl NOT supported/implemented
+var Tween = {
+	element: 'form',
+	tween: [
+		{
+			duration: 2000,
+			callback: function(){
+				// these values have been reached
+			},
+			timing: 'ease-in-out',
+
+			top: 20,
+			transform: {
+				translate3d: [0,0,0],
+				scale: [0,0]
+			}
+		}
+	]
+};
+
+
+// Currentl NOT supported/implemented
 var Spring = {
 	element: 'form',
 	spring: {
@@ -94,15 +99,16 @@ var Spring = {
 	}
 };
 
-var animator = new Animator(),
-	form = document.getElementById('form'),
-	select = document.getElementById('animations'),
-	duration = document.getElementById('duration'),
+var animator       = new Animator(),
+	form           = document.getElementById('form'),
+	select         = document.getElementById('animations'),
+	duration       = document.getElementById('duration'),
 	durationSlider = document.getElementById('duration-slider'),
-	clearQueue = document.getElementById('clear-trigger'),
-	pauseResume = document.getElementById('pause-trigger'),
+	clearQueue     = document.getElementById('clear-trigger'),
+	pauseResume    = document.getElementById('pause-trigger'),
 	option;
 
+// Create all animations defined in the Animations object above
 for (var name in Animations) {
 	animator.addAnimation(name, Animations[name]);
 	option = document.createElement('option');
@@ -161,3 +167,5 @@ pauseResume.addEventListener('click', function(event){
 	}
 
 }, false)
+
+})();
