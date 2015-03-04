@@ -2,6 +2,40 @@
 (function(){ 'use strict';
 
 var Animations = {
+	PopIn: {
+		0: {
+			opacity: 0,
+			transform: {
+				scale: [0, 0],
+			},
+			_timing: 'ease-out'
+		},
+		40: {
+			opacity: 1,
+			transform: {
+				scale: [1.07, 1.07]
+			},
+			_timing: 'ease-in-out',
+			_callback: function(){
+				console.log('In the middle of the animation');
+			}
+		},
+		65: {
+			transform: {
+				scale: [0.98, 0.98]
+			},
+			_timing:'ease-in-out'
+		},
+		100: {
+			transform: {
+				scale: [1, 1]
+			},
+			_callback: function(){
+				console.log('Animation is done');
+			}
+		}
+	},
+
 	SlideIn: {
 		0: {
 			opacity: 0,
@@ -27,40 +61,6 @@ var Animations = {
 		100: {
 			transform: {
 				translate3d: [0,0,0]
-			}
-		}
-	},
-
-	PopIn: {
-		0: {
-			opacity: 0,
-			transform: {
-				scale: [0, 0],
-			},
-			_timing: 'ease-out'
-		},
-		40: {
-			opacity: 1,
-			transform: {
-				scale: [1.1, 1.1]
-			},
-			_timing: 'ease-in-out',
-			_callback: function(){
-				console.log('In the middle of the animation');
-			}
-		},
-		70: {
-			transform: {
-				scale: [0.98, 0.98]
-			},
-			_timing:'ease-in-out'
-		},
-		100: {
-			transform: {
-				scale: [1, 1]
-			},
-			_callback: function(){
-				console.log('Animation is done');
 			}
 		}
 	}
