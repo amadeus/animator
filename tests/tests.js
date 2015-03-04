@@ -138,7 +138,7 @@ clearQueue.addEventListener('click', function(event){
 	// Clear out all styles from the animation
 	var element = document.getElementById('animate');
 	element.setAttribute('style', '');
-	element.className = 'to-animate';
+	document.body.className = '';
 });
 
 pauseResume.addEventListener('click', function(event){
@@ -154,10 +154,10 @@ pauseResume.addEventListener('click', function(event){
 	element = document.getElementById('animate');
 	if (tween.paused) {
 		animator.resumeElement(element);
-		element.className = 'to-animate';
+		document.body.className = '';
 	} else {
 		animator.pauseElement(element);
-		element.className = 'to-animate paused';
+		document.body.className = 'paused';
 	}
 
 }, false)
