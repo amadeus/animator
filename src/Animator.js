@@ -1,13 +1,15 @@
 (function(global){
 
 var Animator, Internal, _typeOf, _toStringRegex, _isElementRegex,
-	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex, _unitRegex, _timingRegex;
+	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex,
+	_unitRegex, _timingRegex, _findPrefix, _isTransform;
 
 _toStringRegex  = /(\[object\ |\])/g;
 _isElementRegex = /html[\w]*element/;
 _startsWithRegex = /^_/;
 _unitRegex = /^[-0-9]+/;
 _timingRegex = /-/g;
+_isTransform = /[Tt]ransform$/;
 
 // Simple typeOf checker
 _typeOf = function(toTest){
@@ -33,6 +35,13 @@ _requestAnimationFrame =
 		window.setTimeout(callback, 1000 / 60);
 	};
 
+
+// Date.now polyfill
+if (!Date.now) {
+	Date.now = function now() {
+		return new Date().getTime();
+	};
+}
 
 // Simple window.performance polyfill
 _performance = global.performance || {};
@@ -78,6 +87,29 @@ if (!Function.prototype.bind) {
 		return fBound;
 	};
 }
+
+// Find the appropriate vendored prefix for the given
+// css prop. The non-prefixed prop will ALWAYS be preferred
+// If nothing can be found, the original prop is returned.
+_findPrefix = function(prop){
+	var toTest = ['webkit', 'moz', 'ms', 'o'], i, joined;
+
+	toTest.unshift(prop);
+	prop = prop.charAt(0).toUpperCase() + prop.slice(1);
+
+	for (i = 0; i < toTest.length; i++) {
+		if (i === 0) {
+			joined = toTest[i];
+		} else {
+			joined = toTest[i] + prop;
+		}
+		if (document.body.style[joined] !== undefined) {
+			return joined;
+		}
+	}
+
+	return prop.toLowerCase();
+};
 
 Internal = {
 
@@ -199,11 +231,11 @@ Internal = {
 		timing = tween.from._timing || Animator.TWEENS.LINEAR;
 
 		for (prop in tween.from) {
-			if (prop.match(_startsWithRegex)) {
+			if (prop.match(_startsWithRegex) || !tween.from[prop]) {
 				continue;
 			}
 
-			if (prop === 'transform') {
+			if (prop.match(_isTransform)) {
 				value = Internal.calculateTransform(
 					tween.from[prop],
 					tween.to[prop],
@@ -211,8 +243,6 @@ Internal = {
 					delta,
 					tween.duration
 				);
-
-				element.style[prop] = value;
 			} else {
 				value = timing(
 					delta,
@@ -220,9 +250,10 @@ Internal = {
 					tween.to[prop][0] - tween.from[prop][0],
 					tween.duration
 				);
-
-				element.style[prop] = value + (tween.from[prop][1] || '');
+				value = value + (tween.from[prop][1] || '');
 			}
+
+			element.style[prop] = value;
 		}
 
 		if (delta > tween.duration) {
@@ -412,7 +443,7 @@ Animator.prototype = {
 	},
 
 	_convertFrame: function(frame, previousFrame){
-		var key, timingKey;
+		var key, timingKey, val;
 
 		if (_typeOf(frame) !== 'object') {
 			return frame;
@@ -426,11 +457,19 @@ Animator.prototype = {
 			if (key === '_timing' && _typeOf(frame[key]) === 'string') {
 				timingKey = frame[key].toUpperCase().replace(_timingRegex, '_');
 				frame[key] = Animator.TWEENS[timingKey];
-			} else if (key === 'transform') {
-				frame[key] = this._convertTransform(frame[key]);
-			} else {
-				frame[key] = this._getValueAndUnit(frame[key], key);
+				continue;
 			}
+
+			if (key.match(_isTransform)) {
+				val = this._convertTransform(frame[key]);
+			} else {
+				val = this._getValueAndUnit(frame[key], key);
+			}
+
+			// Wipe out old frame
+			frame[key] = undefined;
+			key = _findPrefix(key);
+			frame[key] = val;
 		}
 
 		if (previousFrame) {
