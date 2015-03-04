@@ -2,14 +2,14 @@
 
 var Animator, Internal, _typeOf, _toStringRegex, _isElementRegex,
 	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex,
-	_unitRegex, _timingRegex, _findPrefix, _isTransform;
+	_unitRegex, _timingRegex, _findPrefix, _isTransform, _dateNow;
 
-_toStringRegex  = /(\[object\ |\])/g;
-_isElementRegex = /html[\w]*element/;
+_toStringRegex   = /(\[object\ |\])/g;
+_isElementRegex  = /html[\w]*element/;
 _startsWithRegex = /^_/;
-_unitRegex = /^[-0-9]+/;
-_timingRegex = /-/g;
-_isTransform = /[Tt]ransform$/;
+_unitRegex       = /^[-0-9]+/;
+_timingRegex     = /-/g;
+_isTransform     = /[Tt]ransform$/;
 
 // Simple typeOf checker
 _typeOf = function(toTest){
@@ -38,16 +38,18 @@ _requestAnimationFrame =
 
 // Date.now polyfill
 if (!Date.now) {
-	Date.now = function now() {
+	_dateNow = function now() {
 		return new Date().getTime();
 	};
+} else {
+	_dateNow = Date.now;
 }
 
 // Simple window.performance polyfill
 _performance = global.performance || {};
 
 if (!_performance.now) {
-	_nowOffset = Date.now();
+	_nowOffset = _dateNow();
 
 	if (
 		_performance.timing &&
@@ -57,7 +59,7 @@ if (!_performance.now) {
 	}
 
 	_performance.now = function now(){
-		return Date.now() - _nowOffset;
+		return _dateNow() - _nowOffset;
 	};
 }
 
