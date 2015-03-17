@@ -527,8 +527,7 @@ Animator.prototype = {
 			from = Internal.convertFrame(arguments[2]);
 			to   = Internal.convertFrame(arguments[3], from);
 		} else {
-			to   = Internal.convertFrame(arguments[2]);
-			// from = this._getFromTween(element, to);
+			to = Internal.convertFrame(arguments[2]);
 		}
 
 		tween = {

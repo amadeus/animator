@@ -2,6 +2,7 @@
 module.exports = function(grunt){ 'use strict';
 
 grunt.loadNpmTasks('grunt-contrib-connect');
+grunt.loadNpmTasks('grunt-contrib-uglify');
 
 grunt.initConfig({
 
@@ -14,6 +15,30 @@ grunt.initConfig({
 					target: 'http://localhost:5000/tests',
 					appName: 'Google Chrome'
 				}
+			}
+		}
+	},
+
+	uglify: {
+		standard: {
+			options: {
+				mangle: {
+					toplevel: true
+				},
+				compress: {
+					sequences : true,
+					dead_code : true,
+					unused    : true,
+					join_vars : true,
+					unsafe    : true,
+					loops     : true,
+					booleans  : true
+				},
+				report: 'gzip',
+				comments: false
+			},
+			files: {
+				'dist/Animator.min.js': ['src/Animator.js']
 			}
 		}
 	}
