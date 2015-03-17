@@ -2,14 +2,16 @@
 
 var Animator, Internal, _typeOf, _toStringRegex, _isElementRegex,
 	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex,
-	_unitRegex, _timingRegex, _findPrefix, _isTransform, _dateNow;
+	_unitRegex, _timingRegex, _findPrefix, _isTransform, _dateNow,
+	_getComputedStyle, _parseTransformRegex;
 
 _toStringRegex   = /(\[object\ |\])/g;
 _isElementRegex  = /html[\w]*element/;
 _startsWithRegex = /^_/;
-_unitRegex       = /^[-0-9]+/;
+_unitRegex       = /^[-0-9.]+/;
 _timingRegex     = /-/g;
 _isTransform     = /[Tt]ransform$/;
+_parseTransformRegex = /([0-9\w]+)\(([-0-9,.\w]*)\)/;
 
 // Simple typeOf checker
 _typeOf = function(toTest){
@@ -111,6 +113,10 @@ _findPrefix = function(prop){
 	}
 
 	return prop.toLowerCase();
+};
+
+_getComputedStyle = window.getComputedStyle || function(element){
+	return element.style;
 };
 
 Internal = {
@@ -329,6 +335,62 @@ Animator.prototype = {
 		return this;
 	},
 
+	tweenElement: function(element, duration){
+		var from, to, tween;
+		if (_typeOf(element) === 'string') {
+			element = document.getElementById(element);
+		}
+		if (_typeOf(element) !== 'element') {
+			throw new Error(
+				'Animator.tweenElement: Must provide a valid element to tween: ' + element
+			);
+		}
+		if (_typeOf(duration) !== 'number') {
+			throw new TypeError('Animator.tweenElement: Must provide a valid duration: ' + duration);
+		}
+
+		if (arguments.length >= 4) {
+			from = this._convertFrame(arguments[2]);
+			to   = this._convertFrame(arguments[3], from);
+		} else {
+			to   = this._convertFrame(arguments[2]);
+			from = this._getFromTween(element, to);
+		}
+
+		tween = {
+			type: 'tween',
+			duration: duration,
+			from: from,
+			to:to
+		};
+
+		Internal.addTweens(element, [tween]);
+
+		return this;
+	},
+
+	_getFromTween: function(element, to){
+		var from = {},
+			cStyle = _getComputedStyle(element),
+			key, fromTransform;
+
+		for (key in to) {
+			if (key.match(_isTransform)) {
+				fromTransform = Animator.parseTransformString(element.style[key]);
+				from[key] = fromTransform;
+			} else if (key.match(_startsWithRegex)) {
+				from[key] = to[key];
+			} else {
+				from[key] = element.style[key] || cStyle[key] || 0;
+			}
+		}
+
+		from = this._convertFrame(from);
+		Animator.matchMissingKeys(to, from);
+
+		return from;
+	},
+
 	animateElement: function(element, animation, duration){
 		var tweens;
 
@@ -465,24 +527,19 @@ Animator.prototype = {
 			if (key.match(_isTransform)) {
 				val = this._convertTransform(frame[key]);
 			} else {
-				val = this._getValueAndUnit(frame[key], key);
+				val = Animator.getValueAndUnit(frame[key], key);
 			}
 
-			// Wipe out old frame
-			frame[key] = undefined;
-			key = _findPrefix(key);
+			// Use prefixed key if it exists and wipe out non-prefixed def
+			if (!key.match(_startsWithRegex)) {
+				frame[key] = undefined;
+				key = _findPrefix(key);
+			}
 			frame[key] = val;
 		}
 
 		if (previousFrame) {
-			for (key in previousFrame) {
-				if (
-					!key.match(_startsWithRegex) &&
-					!frame[key]
-				) {
-					frame[key] = previousFrame[key];
-				}
-			}
+			Animator.matchMissingKeys(frame, previousFrame);
 		}
 
 		return frame;
@@ -497,41 +554,89 @@ Animator.prototype = {
 				transform[key] = value = [value];
 			}
 			for (i = 0, len = value.length; i < len; i++) {
-				value[i] = this._getValueAndUnit(value[i], key);
+				value[i] = Animator.getValueAndUnit(value[i], key);
 			}
 		}
 
 		return transform;
-	},
+	}
+};
 
-	_getValueAndUnit: function(item, prop){
-		var value, unit, newValue;
+Animator.getValueAndUnit = function(item, prop){
+	var value, unit, newValue;
 
-		if (
-			_typeOf(item) === 'function' ||
-			_typeOf(item) === 'object'
-		) {
-			return item;
-		}
-
-		value = parseFloat(item);
-		if (isNaN(value)) {
-			return [item];
-		}
-
-		newValue = [value];
-		if (item && item.replace) {
-			unit = item.replace(_unitRegex, '');
-		}
-
-		// Only add a unit if it exists
-		if (unit || Animator.DEFAULT_UNITS[prop]) {
-			newValue[1] = unit || Animator.DEFAULT_UNITS[prop];
-		}
-
-		return newValue;
+	if (
+		_typeOf(item) === 'function' ||
+		_typeOf(item) === 'object'
+	) {
+		return item;
 	}
 
+	value = parseFloat(item);
+	if (isNaN(value)) {
+		return [item];
+	}
+
+	newValue = [value];
+	if (item && item.replace) {
+		unit = item.replace(_unitRegex, '');
+	}
+
+	// Only add a unit if it exists
+	if (unit || Animator.DEFAULT_UNITS[prop]) {
+		newValue[1] = unit || Animator.DEFAULT_UNITS[prop];
+	}
+
+	return newValue;
+};
+
+Animator.parseTransformString = function(string){
+	var x, styles, transforms, match;
+
+	// Clean out whitespace and add split separator
+	string = string
+		.replace(/[\ \s]/g, '')
+		.replace(/\)/, ')|');
+
+	styles = string.split('|');
+	transforms = {};
+
+	for (x = 0; x < styles.length; x++) {
+		match = styles[x].match(_parseTransformRegex);
+		if (!match || match.length <= 2) {
+			continue;
+		}
+
+		transforms[match[1]] = match[2].split(',');
+	}
+
+	return transforms;
+};
+
+Animator.matchMissingKeys = function(base, from){
+	var key, isTransform;
+
+	for (key in from) {
+		if (key.match(_startsWithRegex)) {
+			continue;
+		}
+
+		isTransform = key.match(_isTransform);
+		if (!isTransform && base[key]) {
+			continue;
+		}
+
+		if (isTransform) {
+			base[key] = Animator.matchMissingKeys(
+				base[key] || {},
+				from[key]
+			);
+		} else {
+			base[key] = from[key];
+		}
+	}
+
+	return base;
 };
 
 Animator.DEFAULT_UNITS = {

@@ -168,4 +168,22 @@ pauseResume.addEventListener('click', function(event){
 
 }, false)
 
+var element = document.getElementById('animate');
+
+element.style.transform = 'rotate(45deg) translate3d(0, 20px, 10px)';
+
+animator.tweenElement(element, 500, {
+	_timing: 'ease-in-out',
+	transform: {
+		rotate: '0deg'
+	}
+});
+
+animator.tweenElement(element, 500, {
+	_timing: 'ease-in-out',
+	transform: {
+		translate3d: [0, 200, 0]
+	}
+});
+
 })();
