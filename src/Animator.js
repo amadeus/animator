@@ -2,7 +2,7 @@
 
 var Animator, Internal, _typeOf, _toStringRegex, _isElementRegex,
 	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex,
-	_unitRegex, _timingRegex, _findPrefix, _isTransform, _dateNow,
+	_unitRegex, _timingRegex, _isTransform, _dateNow,
 	_getComputedStyle, _parseTransformRegex;
 
 _toStringRegex   = /(\[object\ |\])/g;
@@ -91,29 +91,6 @@ if (!Function.prototype.bind) {
 		return fBound;
 	};
 }
-
-// Find the appropriate vendored prefix for the given
-// css prop. The non-prefixed prop will ALWAYS be preferred
-// If nothing can be found, the original prop is returned.
-_findPrefix = function(prop){
-	var toTest = ['webkit', 'moz', 'ms', 'o'], i, joined;
-
-	toTest.unshift(prop);
-	prop = prop.charAt(0).toUpperCase() + prop.slice(1);
-
-	for (i = 0; i < toTest.length; i++) {
-		if (i === 0) {
-			joined = toTest[i];
-		} else {
-			joined = toTest[i] + prop;
-		}
-		if (document.body.style[joined] !== undefined) {
-			return joined;
-		}
-	}
-
-	return prop.toLowerCase();
-};
 
 _getComputedStyle = window.getComputedStyle || function(element){
 	return element.style;
@@ -308,8 +285,11 @@ Internal = {
 		return false;
 	},
 
+	// Converts a JSON frame to valid tween frame - done
+	// via duplication, the original frame is not modified
 	convertFrame: function(frame, previousFrame){
-		var key, timingKey, val;
+		var newFrame = {},
+			key, timingKey, val;
 
 		if (_typeOf(frame) !== 'object') {
 			return frame;
@@ -322,7 +302,7 @@ Internal = {
 
 			if (key === '_timing' && _typeOf(frame[key]) === 'string') {
 				timingKey = frame[key].toUpperCase().replace(_timingRegex, '_');
-				frame[key] = Animator.TWEENS[timingKey];
+				newFrame[key] = Animator.TWEENS[timingKey];
 				continue;
 			}
 
@@ -332,19 +312,18 @@ Internal = {
 				val = Internal.getValueAndUnit(frame[key], key);
 			}
 
-			// Use prefixed key if it exists and wipe out non-prefixed def
+			// Use prefixed key if it exists
 			if (!key.match(_startsWithRegex)) {
-				frame[key] = undefined;
-				key = _findPrefix(key);
+				key = Animator.findPrefix(key);
 			}
-			frame[key] = val;
+			newFrame[key] = val;
 		}
 
 		if (previousFrame) {
-			Internal.matchMissingKeys(frame, previousFrame);
+			Internal.matchMissingKeys(newFrame, previousFrame);
 		}
 
-		return frame;
+		return newFrame;
 	},
 
 	convertTransform: function(transform){
@@ -403,11 +382,9 @@ Internal = {
 
 	getValueAndUnit: function(item, prop){
 		var value, unit, newValue;
+		// console.log('getValueAndUnit', item, prop);
 
-		if (
-			_typeOf(item) === 'function' ||
-			_typeOf(item) === 'object'
-		) {
+		if (_typeOf(item) !== 'number' && _typeOf(item) !== 'string') {
 			return item;
 		}
 
@@ -555,6 +532,10 @@ Animator.prototype = {
 
 		duration = duration || 1000;
 
+		if (!this._animations[animation]) {
+			throw new Error('Animator.animateElement: Animation does not exist: ' + animation);
+		}
+
 		tweens = Internal.keyframesToTweens(
 			this._animations[animation],
 			duration
@@ -624,6 +605,10 @@ Animator.prototype = {
 Animator.parseTransformString = function(string){
 	var x, styles, transforms, match;
 
+	if (_typeOf(string) !== 'string') {
+		return undefined;
+	}
+
 	// Clean out whitespace and add split separator
 	string = string
 		.replace(/[\ \s]/g, '')
@@ -643,6 +628,30 @@ Animator.parseTransformString = function(string){
 
 	return transforms;
 };
+
+// Find the appropriate vendored prefix for the given
+// css prop. The non-prefixed prop will ALWAYS be preferred
+// If nothing can be found, the original prop is returned.
+Animator.findPrefix = function(prop){
+	var toTest = ['webkit', 'moz', 'ms', 'o'], i, joined;
+
+	toTest.unshift(prop);
+	prop = prop.charAt(0).toUpperCase() + prop.slice(1);
+
+	for (i = 0; i < toTest.length; i++) {
+		if (i === 0) {
+			joined = toTest[i];
+		} else {
+			joined = toTest[i] + prop;
+		}
+		if (document.body.style[joined] !== undefined) {
+			return joined;
+		}
+	}
+
+	return prop.toLowerCase();
+};
+
 
 Animator.DEFAULT_UNITS = {
 	translate3d : 'px',

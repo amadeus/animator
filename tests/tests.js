@@ -170,7 +170,7 @@ pauseResume.addEventListener('click', function(event){
 
 var element = document.getElementById('animate');
 
-element.style.transform = 'rotate(45deg) translate3d(0, 20px, 10px)';
+element.style[Animator.findPrefix('transform')] = 'rotate(45deg) translate3d(0, 20px, 10px)';
 
 animator
 	.tweenElement(element, 500, {
@@ -178,8 +178,7 @@ animator
 		transform: {
 			rotate: '0deg'
 		}
-	})
-	.tweenElement(element, 500, {
+	}).tweenElement(element, 500, {
 		_timing: 'ease-in-out',
 		opacity: 0,
 		transform: {
