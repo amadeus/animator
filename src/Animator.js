@@ -222,6 +222,10 @@ Internal = {
 	updateTween: function(element, tween, tick){
 		var delta, prop, timing, value;
 
+		if (!tween.from) {
+			tween.from = Internal.getFromTween(element, tween.to);
+		}
+
 		if (tween.delta === undefined) {
 			tween.delta = 0;
 		} else {
@@ -302,7 +306,177 @@ Internal = {
 	updateSpring: function(element, spring){
 		console.log('Internal.updateSpring not yet implemented');
 		return false;
+	},
+
+	convertFrame: function(frame, previousFrame){
+		var key, timingKey, val;
+
+		if (_typeOf(frame) !== 'object') {
+			return frame;
+		}
+
+		for (key in frame) {
+			if (!frame.hasOwnProperty(key)) {
+				continue;
+			}
+
+			if (key === '_timing' && _typeOf(frame[key]) === 'string') {
+				timingKey = frame[key].toUpperCase().replace(_timingRegex, '_');
+				frame[key] = Animator.TWEENS[timingKey];
+				continue;
+			}
+
+			if (key.match(_isTransform)) {
+				val = Internal.convertTransform(frame[key]);
+			} else {
+				val = Internal.getValueAndUnit(frame[key], key);
+			}
+
+			// Use prefixed key if it exists and wipe out non-prefixed def
+			if (!key.match(_startsWithRegex)) {
+				frame[key] = undefined;
+				key = _findPrefix(key);
+			}
+			frame[key] = val;
+		}
+
+		if (previousFrame) {
+			Internal.matchMissingKeys(frame, previousFrame);
+		}
+
+		return frame;
+	},
+
+	convertTransform: function(transform){
+		var key, value, i, len;
+
+		for (key in transform) {
+			value = transform[key];
+			if (_typeOf(value) !== 'array') {
+				transform[key] = value = [value];
+			}
+			for (i = 0, len = value.length; i < len; i++) {
+				value[i] = Internal.getValueAndUnit(value[i], key);
+			}
+		}
+
+		return transform;
+	},
+
+	keyframesToTweens: function(animation, duration){
+		var tweens = [],
+			from, to, fromPercent, toPercent, percent, tween;
+
+		for (percent in animation) {
+			if (!animation.hasOwnProperty(percent)) {
+				continue;
+			}
+
+			if (!from) {
+				from = animation[percent];
+				fromPercent = parseFloat(percent) / 100;
+				continue;
+			}
+			to = animation[percent];
+			toPercent = parseFloat(percent) / 100;
+
+			tween = {
+				type     : 'tween',
+				from     : from,
+				to       : to,
+				duration : ((duration * toPercent) - (duration * fromPercent)) >> 0
+			};
+
+			tweens.push(tween);
+
+			from = to;
+			fromPercent = toPercent;
+		}
+
+		to   = undefined;
+		from = undefined;
+		fromPercent = undefined;
+		toPercent   = undefined;
+
+		return tweens;
+	},
+
+	getValueAndUnit: function(item, prop){
+		var value, unit, newValue;
+
+		if (
+			_typeOf(item) === 'function' ||
+			_typeOf(item) === 'object'
+		) {
+			return item;
+		}
+
+		value = parseFloat(item);
+		if (isNaN(value)) {
+			return [item];
+		}
+
+		newValue = [value];
+		if (item && item.replace) {
+			unit = item.replace(_unitRegex, '');
+		}
+
+		// Only add a unit if it exists
+		if (unit || Animator.DEFAULT_UNITS[prop]) {
+			newValue[1] = unit || Animator.DEFAULT_UNITS[prop];
+		}
+
+		return newValue;
+	},
+
+	matchMissingKeys: function(base, from){
+		var key, isTransform;
+
+		for (key in from) {
+			if (key.match(_startsWithRegex)) {
+				continue;
+			}
+
+			isTransform = key.match(_isTransform);
+			if (!isTransform && base[key]) {
+				continue;
+			}
+
+			if (isTransform) {
+				base[key] = Internal.matchMissingKeys(
+					base[key] || {},
+					from[key]
+				);
+			} else {
+				base[key] = from[key];
+			}
+		}
+
+		return base;
+	},
+
+	getFromTween: function(element, to){
+		var from = {},
+			cStyle = _getComputedStyle(element),
+			key, fromTransform;
+
+		for (key in to) {
+			if (key.match(_isTransform)) {
+				fromTransform = Animator.parseTransformString(element.style[key]);
+				from[key] = fromTransform;
+			} else if (key.match(_startsWithRegex)) {
+				from[key] = to[key];
+			} else {
+				from[key] = element.style[key] || cStyle[key] || 0;
+			}
+		}
+
+		from = Internal.convertFrame(from);
+		Internal.matchMissingKeys(to, from);
+
+		return from;
 	}
+
 };
 
 Animator = function(){
@@ -322,7 +496,7 @@ Animator.prototype = {
 		}
 
 		for (frame in keyframes) {
-			keyframes[frame] = this._convertFrame(keyframes[frame], previousFrame);
+			keyframes[frame] = Internal.convertFrame(keyframes[frame], previousFrame);
 			previousFrame = keyframes[frame];
 		}
 
@@ -350,45 +524,23 @@ Animator.prototype = {
 		}
 
 		if (arguments.length >= 4) {
-			from = this._convertFrame(arguments[2]);
-			to   = this._convertFrame(arguments[3], from);
+			from = Internal.convertFrame(arguments[2]);
+			to   = Internal.convertFrame(arguments[3], from);
 		} else {
-			to   = this._convertFrame(arguments[2]);
-			from = this._getFromTween(element, to);
+			to   = Internal.convertFrame(arguments[2]);
+			// from = this._getFromTween(element, to);
 		}
 
 		tween = {
-			type: 'tween',
-			duration: duration,
-			from: from,
-			to:to
+			type     : 'tween',
+			duration : duration,
+			from     : from,
+			to       : to
 		};
 
 		Internal.addTweens(element, [tween]);
 
 		return this;
-	},
-
-	_getFromTween: function(element, to){
-		var from = {},
-			cStyle = _getComputedStyle(element),
-			key, fromTransform;
-
-		for (key in to) {
-			if (key.match(_isTransform)) {
-				fromTransform = Animator.parseTransformString(element.style[key]);
-				from[key] = fromTransform;
-			} else if (key.match(_startsWithRegex)) {
-				from[key] = to[key];
-			} else {
-				from[key] = element.style[key] || cStyle[key] || 0;
-			}
-		}
-
-		from = this._convertFrame(from);
-		Animator.matchMissingKeys(to, from);
-
-		return from;
 	},
 
 	animateElement: function(element, animation, duration){
@@ -404,7 +556,7 @@ Animator.prototype = {
 
 		duration = duration || 1000;
 
-		tweens = this._keyframesToTweens(
+		tweens = Internal.keyframesToTweens(
 			this._animations[animation],
 			duration
 		);
@@ -466,128 +618,8 @@ Animator.prototype = {
 		}
 
 		return Internal.elements[element._animatorID][0];
-	},
-
-	_keyframesToTweens: function(animation, duration){
-		var tweens = [],
-			from, to, fromPercent, toPercent, percent, tween;
-
-		for (percent in animation) {
-			if (!animation.hasOwnProperty(percent)) {
-				continue;
-			}
-
-			if (!from) {
-				from = animation[percent];
-				fromPercent = parseFloat(percent) / 100;
-				continue;
-			}
-			to = animation[percent];
-			toPercent = parseFloat(percent) / 100;
-
-			tween = {
-				type     : 'tween',
-				from     : from,
-				to       : to,
-				duration : ((duration * toPercent) - (duration * fromPercent)) >> 0
-			};
-
-			tweens.push(tween);
-
-			from = to;
-			fromPercent = toPercent;
-		}
-
-		to   = undefined;
-		from = undefined;
-		fromPercent = undefined;
-		toPercent   = undefined;
-
-		return tweens;
-	},
-
-	_convertFrame: function(frame, previousFrame){
-		var key, timingKey, val;
-
-		if (_typeOf(frame) !== 'object') {
-			return frame;
-		}
-
-		for (key in frame) {
-			if (!frame.hasOwnProperty(key)) {
-				continue;
-			}
-
-			if (key === '_timing' && _typeOf(frame[key]) === 'string') {
-				timingKey = frame[key].toUpperCase().replace(_timingRegex, '_');
-				frame[key] = Animator.TWEENS[timingKey];
-				continue;
-			}
-
-			if (key.match(_isTransform)) {
-				val = this._convertTransform(frame[key]);
-			} else {
-				val = Animator.getValueAndUnit(frame[key], key);
-			}
-
-			// Use prefixed key if it exists and wipe out non-prefixed def
-			if (!key.match(_startsWithRegex)) {
-				frame[key] = undefined;
-				key = _findPrefix(key);
-			}
-			frame[key] = val;
-		}
-
-		if (previousFrame) {
-			Animator.matchMissingKeys(frame, previousFrame);
-		}
-
-		return frame;
-	},
-
-	_convertTransform: function(transform){
-		var key, value, i, len;
-
-		for (key in transform) {
-			value = transform[key];
-			if (_typeOf(value) !== 'array') {
-				transform[key] = value = [value];
-			}
-			for (i = 0, len = value.length; i < len; i++) {
-				value[i] = Animator.getValueAndUnit(value[i], key);
-			}
-		}
-
-		return transform;
-	}
-};
-
-Animator.getValueAndUnit = function(item, prop){
-	var value, unit, newValue;
-
-	if (
-		_typeOf(item) === 'function' ||
-		_typeOf(item) === 'object'
-	) {
-		return item;
 	}
 
-	value = parseFloat(item);
-	if (isNaN(value)) {
-		return [item];
-	}
-
-	newValue = [value];
-	if (item && item.replace) {
-		unit = item.replace(_unitRegex, '');
-	}
-
-	// Only add a unit if it exists
-	if (unit || Animator.DEFAULT_UNITS[prop]) {
-		newValue[1] = unit || Animator.DEFAULT_UNITS[prop];
-	}
-
-	return newValue;
 };
 
 Animator.parseTransformString = function(string){
@@ -611,32 +643,6 @@ Animator.parseTransformString = function(string){
 	}
 
 	return transforms;
-};
-
-Animator.matchMissingKeys = function(base, from){
-	var key, isTransform;
-
-	for (key in from) {
-		if (key.match(_startsWithRegex)) {
-			continue;
-		}
-
-		isTransform = key.match(_isTransform);
-		if (!isTransform && base[key]) {
-			continue;
-		}
-
-		if (isTransform) {
-			base[key] = Animator.matchMissingKeys(
-				base[key] || {},
-				from[key]
-			);
-		} else {
-			base[key] = from[key];
-		}
-	}
-
-	return base;
 };
 
 Animator.DEFAULT_UNITS = {
