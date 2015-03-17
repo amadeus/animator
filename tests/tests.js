@@ -181,6 +181,7 @@ animator.tweenElement(element, 500, {
 
 animator.tweenElement(element, 500, {
 	_timing: 'ease-in-out',
+	opacity: 0,
 	transform: {
 		translate3d: [0, 200, 0]
 	}
