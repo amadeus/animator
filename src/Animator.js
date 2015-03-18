@@ -311,36 +311,7 @@ Internal = {
 	// Converts a JSON frame to valid tween frame - done
 	// via duplication, the original frame is not modified
 	convertFrame: function(frame, previousFrame){
-		var newFrame = {},
-			key, timingKey, val;
-
-		if (_typeOf(frame) !== 'object') {
-			return frame;
-		}
-
-		for (key in frame) {
-			if (!frame.hasOwnProperty(key)) {
-				continue;
-			}
-
-			if (key === '_timing' && _typeOf(frame[key]) === 'string') {
-				timingKey = frame[key].toUpperCase().replace(_timingRegex, '_');
-				newFrame[key] = Animator.TWEENS[timingKey];
-				continue;
-			}
-
-			if (_isTransform.test(key)) {
-				val = Internal.convertTransform(frame[key]);
-			} else {
-				val = Internal.getValueAndUnit(frame[key], key);
-			}
-
-			// Use prefixed key if it exists
-			if (_startsWithRegex.test(key)) {
-				key = Animator.findPrefix(key);
-			}
-			newFrame[key] = val;
-		}
+		var newFrame = Internal.convertObject(frame);
 
 		if (previousFrame) {
 			Internal.matchMissingKeys(newFrame, previousFrame);
@@ -349,25 +320,31 @@ Internal = {
 		return newFrame;
 	},
 
-	convertTransform: function(transform){
-		var values, key, value, i, len;
+	convertObject: function(obj){
+		var newObject = {},
+			key, timingKey, value;
 
-		for (key in transform) {
-			values = [];
-			value = transform[key];
-			if (_typeOf(value) !== 'array') {
-				value = [value];
+		for (key in obj) {
+			if (!obj.hasOwnProperty(key)) {
+				continue;
 			}
-			for (i = 0, len = value.length; i < len; i++) {
-				values.push.apply(
-					values,
-					Internal.getValueAndUnit(value[i], key)
-				);
+
+			if (key === '_timing' && _typeOf(obj[key]) === 'string') {
+				timingKey = obj[key].toUpperCase().replace(_timingRegex, '_');
+				value = Animator.TWEENS[timingKey] || Animator.TWEENS.LINEAR;
+			} else if (_typeOf(obj[key]) === 'object') {
+				value = Internal.convertObject(obj[key]);
+			} else {
+				value = Internal.getValueAndUnits(obj[key], key);
 			}
-			transform[key] = values;
+
+			if (!_startsWithRegex.test(key)) {
+				key = Animator.findPrefix(key);
+			}
+			newObject[key] = value;
 		}
 
-		return transform;
+		return newObject;
 	},
 
 	keyframesToTweens: function(animation, duration){
@@ -408,26 +385,35 @@ Internal = {
 		return tweens;
 	},
 
-	getValueAndUnit: function(item, prop){
-		var value, unit, newValue;
+	getValueAndUnits: function(items, prop){
+		var value, unit, x;
 
-		if (_typeOf(item) !== 'number' && _typeOf(item) !== 'string') {
-			return item;
+		if (
+			_typeOf(items) !== 'number' &&
+			_typeOf(items) !== 'string' &&
+			_typeOf(items) !== 'array'
+		) {
+			return items;
 		}
 
-		value = parseFloat(item);
-		if (isNaN(value)) {
-			return [item];
+		if (_typeOf(items) !== 'array') {
+			items = [items];
 		}
 
-		newValue = [value];
-		if (item && item.replace) {
-			unit = item.replace(_unitRegex, '');
+		for (x = 0; x < items.length; x += 2) {
+			value = parseFloat(items[x]);
+			if (isNaN(value)) {
+				items.splice(x + 1, 0, '');
+				continue;
+			}
+			if (items[x] && items[x].replace) {
+				unit = items[x].replace(_unitRegex, '');
+			}
+			items[x] = value;
+			items.splice(x + 1, 0, unit || Animator.DEFAULT_UNITS[prop] || '');
 		}
 
-		newValue[1] = unit || Animator.DEFAULT_UNITS[prop] || '';
-
-		return newValue;
+		return items;
 	},
 
 	matchMissingKeys: function(base, from){
