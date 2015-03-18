@@ -524,6 +524,10 @@ Animator = function(){
 
 Animator.prototype = {
 
+	isRunning: function(){
+		return Internal.isRunning;
+	},
+
 	addAnimation: function(name, keyframes){
 		var frame, previousFrame;
 
@@ -617,7 +621,9 @@ Animator.prototype = {
 			return this;
 		}
 
-		Internal.toRemove.push(element._animatorID);
+		if (Internal.isRunning) {
+			Internal.toRemove.push(element._animatorID);
+		}
 
 		return this;
 	},
