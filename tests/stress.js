@@ -27,20 +27,22 @@ var createBlock = function(){
 		randomInt(0, 255) + ')';
 
 	var left = randomInt(-10, window.innerWidth);
-	var duration = randomInt(500, 2000);
-	var scale = 1 - (duration - 500) / 1500;
+	var duration = randomInt(1000, 3000);
+	var scale = 1 - (duration - 1000) / 2000;
 	el.style.left = left + 'px';
-	// el.style.width =  (10 * scale) + 'px';
-	// el.style.height = (10 * scale) + 'px';
+	el.style.width =  (10 * scale) + 'px';
+	el.style.height = (10 * scale) + 'px';
 	el.style[Animator.findPrefix('transform')] = 'translate3d(0,-10px,0)';
 
 	document.body.appendChild(el);
 
 	animator.tweenElement(el, duration, {
-		// top: window.innerHeight - 100,
+		opacity: 0,
 		transform: {
 			translate3d: [0, (window.innerHeight + 20), 0]
 		},
+
+		_timing: 'ease-in',
 		_callback: function(){
 			el.parentNode.removeChild(el);
 			el = null;
@@ -52,11 +54,11 @@ var createBlock = function(){
 };
 
 var func = function(){
-	for (var x = 0; x < 8; x++) {
+	for (var x = 0; x < 4; x++) {
 		createBlock();
 	}
 
-	counterEl.innerHTML = counter + ' sprites';
+	counterEl.innerHTML = counter + ' simultaneous tweens';
 
 	_requestAnimationFrame(func);
 };

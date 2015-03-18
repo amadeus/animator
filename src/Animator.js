@@ -124,6 +124,7 @@ Internal = {
 			// this.elements[id].element = element;
 			// Trying out apply to reduce garbage... even if it's a bit slower...
 			previousTweens.push.apply(previousTweens, tweens);
+			tweens.length = 0;
 			return;
 		}
 
