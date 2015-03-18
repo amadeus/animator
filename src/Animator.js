@@ -201,7 +201,7 @@ Internal = {
 				done = Internal.updateTween(anims.element, anims[0], tick);
 				if (done) {
 					if (anims[0].to._callback) {
-						anims[0].to._callback();
+						anims[0].to._callback(anims.element, anims[0]);
 					}
 					// Splice seems to eek out a few small milliseconds over shift
 					anims.splice(0, 1);

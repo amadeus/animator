@@ -18,6 +18,12 @@ var randomInt = function(min, max){
 
 var animator = new Animator();
 
+var removeNode = function(el, tween){
+	el.parentNode.removeChild(el);
+	el = null;
+	counter--;
+};
+
 var createBlock = function(){
 	var el = document.createElement('div');
 	el.className = 'box';
@@ -43,11 +49,7 @@ var createBlock = function(){
 		},
 
 		_timing: 'ease-in',
-		_callback: function(){
-			el.parentNode.removeChild(el);
-			el = null;
-			counter--;
-		}
+		_callback: removeNode
 	});
 
 	counter++;
