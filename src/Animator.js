@@ -3,7 +3,8 @@
 var Animator, Internal, _typeOf, _toStringRegex, _isElementRegex,
 	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex,
 	_unitRegex, _timingRegex, _dateNow, _containsCSSFunc,
-	_getComputedStyle, _parseTransformRegex, _replacePipeRegex, _replaceSpaceRegex;
+	_getComputedStyle, _parseTransformRegex, _replacePipeRegex,
+	_replaceSpaceRegex, _isColorFunc;
 
 _toStringRegex   = /(\[object\ |\])/g;
 _isElementRegex  = /html[\w]*element/;
@@ -14,6 +15,7 @@ _containsCSSFunc = /[()]/;
 _parseTransformRegex = /([0-9\w]+)\(([-0-9,.%\w]*)\)/;
 _replaceSpaceRegex = /[\ \s]/g;
 _replacePipeRegex = /\)/g;
+_isColorFunc = /^(rgb|hsl)/;
 
 // Simple typeOf checker
 _typeOf = function(toTest){
@@ -246,12 +248,20 @@ Internal = {
 						value += to[prop][x] + to[prop][x + 1];
 						continue;
 					}
-					value += timing(
-						delta,
-						from[prop][x],
-						to[prop][x] - from[prop][x],
-						duration
-					);
+
+					// String CSS values that cannot be tweened, will
+					// simply accept the from value until the animation
+					// is finished
+					if (from[prop][x].length) {
+						value += from[prop][x];
+					} else {
+						value += timing(
+							delta,
+							from[prop][x],
+							to[prop][x] - from[prop][x],
+							duration
+						);
+					}
 					if (from[prop][x + 1]) {
 						value += from[prop][x + 1];
 					}
@@ -297,11 +307,10 @@ Internal = {
 						to[prop][v] - from[prop][v],
 						duration
 					);
-					if (prop === 'rgb' || (prop === 'rgba' && v < 6)) {
-						currentValue = currentValue >> 0;
-					}
 				}
-				if (from[prop][v + 1]) {
+				if (from[prop][v + 1] === 'int') {
+					currentValue = currentValue >> 0;
+				} else if (from[prop][v + 1]) {
 					currentValue += from[prop][v + 1];
 				}
 				item += currentValue;
@@ -355,6 +364,7 @@ Internal = {
 			if (!_startsWithRegex.test(key)) {
 				key = Animator.findPrefix(key);
 			}
+
 			newObject[key] = value;
 		}
 
@@ -419,7 +429,9 @@ Internal = {
 		}
 
 		for (x = 0; x < items.length; x += 2) {
+			unit = '';
 			value = parseFloat(items[x]);
+
 			if (isNaN(value)) {
 				items.splice(x + 1, 0, '');
 				continue;
@@ -427,6 +439,10 @@ Internal = {
 			if (items[x] && items[x].replace) {
 				unit = items[x].replace(_unitRegex, '');
 			}
+			if (!unit && _isColorFunc.test(prop) && x <= 4) {
+				unit = 'int';
+			}
+
 			items[x] = value;
 			items.splice(x + 1, 0, unit || Animator.DEFAULT_UNITS[prop] || '');
 		}
@@ -447,8 +463,8 @@ Internal = {
 					base[key] || {},
 					from[key]
 				);
-			} else if (!base[key] && (key === 'rgb' || key === 'rgba')) {
-				Internal.fixColor(key, base, from);
+			} else if (!base[key] && _isColorFunc.test(key)) {
+				Internal.fixColor(key, key.match(_isColorFunc)[0], base, from);
 			} else if (!base[key]){
 				base[key] = from[key];
 			}
@@ -457,17 +473,18 @@ Internal = {
 		return base;
 	},
 
-	fixColor: function(key, base, from){
-		if (key === 'rgb' && base.rgba) {
-			from.rgba = from.rgb;
-			from.rgb = undefined;
-			from.rgba.push(1, '');
+	fixColor: function(key, baseKey, base, from){
+		var key2 = baseKey + 'a';
+		if (from[baseKey] && base[key2]) {
+			from[key2] = from[baseKey];
+			from[baseKey] = undefined;
+			from[key2].push(1, '');
 			return;
 		}
-		if (key === 'rgba' && base.rgb) {
-			base.rgba = base.rgb;
-			base.rgb = undefined;
-			base.rgba.push(1, '');
+		if (from[key2] && base[baseKey]) {
+			base[key2] = base[baseKey];
+			base[baseKey] = undefined;
+			base[key2].push(1, '');
 			return;
 		}
 		base[key] = from[key];
