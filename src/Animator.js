@@ -504,7 +504,7 @@ Internal = {
 			value = element.style[key] || cStyle[key] || 0;
 
 			if (_containsCSSFunc.test(value)) {
-				value = Animator.parseTransformString(value);
+				value = Animator.parseCSSFunctionString(value);
 			}
 
 			from[key] = value;
@@ -678,10 +678,13 @@ Animator.prototype = {
 
 };
 
-Animator.parseTransformString = function(string){
+Animator.parseCSSFunctionString = function(string){
 	var x, styles, transforms, match;
 
-	if (_typeOf(string) !== 'string') {
+	if (
+		_typeOf(string) !== 'string' ||
+		!_containsCSSFunc.test(string)
+	) {
 		return undefined;
 	}
 
