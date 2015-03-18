@@ -2,9 +2,9 @@
 
 var Animator, Internal, _typeOf, _toStringRegex, _isElementRegex,
 	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex,
-	_unitRegex, _timingRegex, _dateNow, _containsCSSFunc,
+	_unitRegex, _timingRegex, _dateNow, _containsCSSFunc, _defaultPixelRegex,
 	_getComputedStyle, _parseTransformRegex, _replacePipeRegex,
-	_replaceSpaceRegex, _isColorFunc;
+	_replaceSpaceRegex, _isColorFunc, _camelCaseRegex, _toCamelCase;
 
 _toStringRegex   = /(\[object\ |\])/g;
 _isElementRegex  = /html[\w]*element/;
@@ -16,6 +16,8 @@ _parseTransformRegex = /([0-9\w]+)\(([-0-9,.%\w]*)\)/;
 _replaceSpaceRegex = /[\ \s]/g;
 _replacePipeRegex = /\)/g;
 _isColorFunc = /^(rgb|hsl)/;
+_camelCaseRegex = /-\D/g;
+_defaultPixelRegex = /(translate3d|translate|translateX|translateY|translateZ|perspective|top|left|bottom|right|height|width|margin|padding|border)/;
 
 // Simple typeOf checker
 _typeOf = function(toTest){
@@ -98,6 +100,13 @@ if (!Function.prototype.bind) {
 
 _getComputedStyle = window.getComputedStyle || function(element){
 	return element.style;
+};
+
+// Copied from MooTools
+_toCamelCase = function(string){
+	return string.replace(_camelCaseRegex, function(match){
+		return match.charAt(1).toUpperCase();
+	});
 };
 
 Internal = {
@@ -362,6 +371,7 @@ Internal = {
 			}
 
 			if (!_startsWithRegex.test(key)) {
+				key = _toCamelCase(key);
 				key = Animator.findPrefix(key);
 			}
 
@@ -439,19 +449,22 @@ Internal = {
 			if (items[x] && items[x].replace) {
 				unit = items[x].replace(_unitRegex, '');
 			}
+			if (!unit && _defaultPixelRegex.test(prop)) {
+				unit = 'px';
+			}
 			if (!unit && _isColorFunc.test(prop) && x <= 4) {
 				unit = 'int';
 			}
 
 			items[x] = value;
-			items.splice(x + 1, 0, unit || Animator.DEFAULT_UNITS[prop] || '');
+			items.splice(x + 1, 0, unit);
 		}
 
 		return items;
 	},
 
 	matchMissingKeys: function(base, from){
-		var key;
+		var key, x, longer, shorter;
 
 		for (key in from) {
 			if (_startsWithRegex.test(key)) {
@@ -467,6 +480,23 @@ Internal = {
 				Internal.fixColor(key, key.match(_isColorFunc)[0], base, from);
 			} else if (!base[key]){
 				base[key] = from[key];
+			}
+
+			// Extrapolate differing
+			if (base[key].length !== from[key].length) {
+				if (base[key].length > from[key].length) {
+					longer  = base[key];
+					shorter = from[key];
+				} else {
+					longer  = from[key];
+					shorter = base[key];
+				}
+				for (x = shorter.length - 4; shorter.length < longer.length; x += 2) {
+					if (x < 0) {
+						x = 0;
+					}
+					shorter.push(shorter[x], shorter[x + 1]);
+				}
 			}
 		}
 
@@ -729,24 +759,6 @@ Animator.findPrefix = function(prop){
 	}
 
 	return prop.toLowerCase();
-};
-
-
-Animator.DEFAULT_UNITS = {
-	translate3d : 'px',
-	translate   : 'px',
-	translateX  : 'px',
-	translateY  : 'px',
-	translateZ  : 'px',
-	perspective : 'px',
-
-	top    : 'px',
-	left   : 'px',
-	bottom : 'px',
-	right  : 'px',
-	height : 'px',
-	width  : 'px',
-	margin : 'px'
 };
 
 Animator.TWEENS = {
