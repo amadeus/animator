@@ -482,6 +482,10 @@ Internal = {
 				base[key] = from[key];
 			}
 
+			if (!base[key]) {
+				continue;
+			}
+
 			// Extrapolate differing
 			if (base[key].length !== from[key].length) {
 				if (base[key].length > from[key].length) {
