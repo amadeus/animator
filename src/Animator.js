@@ -110,25 +110,27 @@ Internal = {
 	toRemove  : [],
 
 	addTweens: function(element, tweens){
-		var id, previousTweens;
+		var id = element._animatorID,
+			previousTweens;
 
 		// Element is currently animating
-		if (element._animatorID) {
-			id = element._animatorID;
-			previousTweens = this.elements[id];
-			if (previousTweens) {
-				this.elements[id] = previousTweens.concat.apply(this.elements[id], tweens);
-			} else {
-				this.elements[id] = tweens;
-			}
-			this.elements[id].element = element;
+		if (!id) {
+			id = element._animatorID = 'anim-' + this._index++;
+		}
+
+		previousTweens = this.elements[id];
+		if (previousTweens) {
+			// this.elements[id] = previousTweens.concat.apply(this.elements[id], tweens);
+			// this.elements[id].element = element;
+			// Trying out apply to reduce garbage... even if it's a bit slower...
+			previousTweens.push.apply(previousTweens, tweens);
 			return;
 		}
 
-		tweens.element = element;
-		id = element._animatorID = 'anim-' + this._index++;
 		this.elements[id] = tweens;
+		this.elements[id].element = element;
 		this.animating.push(id);
+
 		this.start();
 	},
 
