@@ -3,7 +3,7 @@
 var Animator, Internal, _typeOf, _toStringRegex, _isElementRegex,
 	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex,
 	_unitRegex, _timingRegex, _isTransform, _dateNow,
-	_getComputedStyle, _parseTransformRegex;
+	_getComputedStyle, _parseTransformRegex, _replacePipeRegex, _replaceSpaceRegex;
 
 _toStringRegex   = /(\[object\ |\])/g;
 _isElementRegex  = /html[\w]*element/;
@@ -11,7 +11,9 @@ _startsWithRegex = /^_/;
 _unitRegex       = /^[-0-9.]+/;
 _timingRegex     = /-/g;
 _isTransform     = /[Tt]ransform$/;
-_parseTransformRegex = /([0-9\w]+)\(([-0-9,.\w]*)\)/;
+_parseTransformRegex = /([0-9\w]+)\(([-0-9,.%\w]*)\)/;
+_replaceSpaceRegex = /[\ \s]/g;
+_replacePipeRegex = /\)/g;
 
 // Simple typeOf checker
 _typeOf = function(toTest){
@@ -114,7 +116,11 @@ Internal = {
 		if (element._animatorID) {
 			id = element._animatorID;
 			previousTweens = this.elements[id];
-			this.elements[id] = previousTweens.concat.apply(this.elements[id], tweens);
+			if (previousTweens) {
+				this.elements[id] = previousTweens.concat.apply(this.elements[id], tweens);
+			} else {
+				this.elements[id] = tweens;
+			}
 			this.elements[id].element = element;
 			return;
 		}
@@ -144,7 +150,6 @@ Internal = {
 		if (toRemove.length) {
 			for (a = 0, len = toRemove.length; a < len; a++) {
 				id = toRemove[a];
-				Internal.elements[id].element._animatorID = undefined;
 				Internal.elements[id] = undefined;
 				index = animating.indexOf(id);
 				if (index >= 0) {
@@ -184,10 +189,12 @@ Internal = {
 					if (anims[0].to._callback) {
 						anims[0].to._callback();
 					}
-					anims.shift();
+					// Splice seems to eek out a few small milliseconds over shift
+					anims.splice(0, 1);
 				}
 
 				if (done && !anims.length) {
+					// toRemove[toRemove.length] = animating[a];
 					toRemove.push(animating[a]);
 				}
 			}
@@ -233,19 +240,23 @@ Internal = {
 					tween.duration
 				);
 			} else {
-				value = timing(
-					delta,
-					tween.from[prop][0],
-					tween.to[prop][0] - tween.from[prop][0],
-					tween.duration
-				);
-				value = value + (tween.from[prop][1] || '');
+				if (delta >= tween.duration) {
+					value = tween.to[prop][0];
+				} else {
+					value = timing(
+						delta,
+						tween.from[prop][0],
+						tween.to[prop][0] - tween.from[prop][0],
+						tween.duration
+					);
+				}
+				value = value + (tween.from[prop][1] || 0);
 			}
 
 			element.style[prop] = value;
 		}
 
-		if (delta > tween.duration) {
+		if (delta >= tween.duration) {
 			return true;
 		} else {
 			return false;
@@ -253,31 +264,38 @@ Internal = {
 	},
 
 	calculateTransform: function(from, to, timing, delta, duration){
-		var css = [], v, currentValues, item, prop;
+		var css = '',
+			v, len, currentValue, item, prop;
 
 		for (prop in from) {
 			item = prop + '(';
+			len = from[prop].length;
 
-			currentValues = [];
-
-			for (v = 0; v < from[prop].length; v++) {
-				currentValues[v] = timing(
-					delta,
-					from[prop][v][0],
-					to[prop][v][0] - from[prop][v][0],
-					duration
-				);
+			for (v = 0; v < len; v++) {
+				if (delta >= duration) {
+					currentValue = to[prop][v][0];
+				} else {
+					currentValue = timing(
+						delta,
+						from[prop][v][0],
+						to[prop][v][0] - from[prop][v][0],
+						duration
+					);
+				}
 				if (from[prop][v][1]) {
-					currentValues[v] += from[prop][v][1];
+					currentValue += from[prop][v][1];
+				}
+				item += currentValue;
+				if (v < from[prop].length - 1) {
+					item += ',';
 				}
 			}
-			item += currentValues.join(',');
 
 			item += ')';
-			css.push(item);
+			css += ' ' + item;
 		}
 
-		return css.join(' ');
+		return css;
 	},
 
 	updateSpring: function(element, spring){
@@ -382,7 +400,6 @@ Internal = {
 
 	getValueAndUnit: function(item, prop){
 		var value, unit, newValue;
-		// console.log('getValueAndUnit', item, prop);
 
 		if (_typeOf(item) !== 'number' && _typeOf(item) !== 'string') {
 			return item;
@@ -435,12 +452,13 @@ Internal = {
 	getFromTween: function(element, to){
 		var from = {},
 			cStyle = _getComputedStyle(element),
-			key, fromTransform;
+			key;
 
 		for (key in to) {
 			if (key.match(_isTransform)) {
-				fromTransform = Animator.parseTransformString(element.style[key]);
-				from[key] = fromTransform;
+				// Never use computed style for transforms or we lose
+				// our transforms to a matrix
+				from[key] = Animator.parseTransformString(element.style[key]);
 			} else if (key.match(_startsWithRegex)) {
 				from[key] = to[key];
 			} else {
@@ -569,7 +587,9 @@ Animator.prototype = {
 			return this;
 		}
 
-		Internal.elements[element._animatorID][0].paused = true;
+		if (Internal.elements[element._animatorID]) {
+			Internal.elements[element._animatorID][0].paused = true;
+		}
 
 		return this;
 	},
@@ -583,7 +603,9 @@ Animator.prototype = {
 			return this;
 		}
 
-		Internal.elements[element._animatorID][0].paused = false;
+		if (Internal.elements[element._animatorID]) {
+			Internal.elements[element._animatorID][0].paused = false;
+		}
 
 		return this;
 	},
@@ -597,7 +619,11 @@ Animator.prototype = {
 			return null;
 		}
 
-		return Internal.elements[element._animatorID][0];
+		if (Internal.elements[element._animatorID]) {
+			return Internal.elements[element._animatorID][0];
+		}
+
+		return null;
 	}
 
 };
@@ -611,8 +637,8 @@ Animator.parseTransformString = function(string){
 
 	// Clean out whitespace and add split separator
 	string = string
-		.replace(/[\ \s]/g, '')
-		.replace(/\)/, ')|');
+		.replace(_replaceSpaceRegex, '')
+		.replace(_replacePipeRegex, ')|');
 
 	styles = string.split('|');
 	transforms = {};
