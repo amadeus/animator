@@ -23,7 +23,7 @@ _typeOf = function(toTest){
 		.replace(_toStringRegex, '')
 		.toLowerCase();
 
-	if (type.match(_isElementRegex)) {
+	if (_isElementRegex.test(type)) {
 		return 'element';
 	}
 
@@ -227,11 +227,11 @@ Internal = {
 		timing = tween.from._timing || Animator.TWEENS.LINEAR;
 
 		for (prop in tween.from) {
-			if (prop.match(_startsWithRegex) || !tween.from[prop]) {
+			if (_startsWithRegex.test(prop) || !tween.from[prop]) {
 				continue;
 			}
 
-			if (prop.match(_isTransform)) {
+			if (_isTransform.test(prop)) {
 				value = Internal.calculateTransform(
 					tween.from[prop],
 					tween.to[prop],
@@ -324,14 +324,14 @@ Internal = {
 				continue;
 			}
 
-			if (key.match(_isTransform)) {
+			if (_isTransform.test(key)) {
 				val = Internal.convertTransform(frame[key]);
 			} else {
 				val = Internal.getValueAndUnit(frame[key], key);
 			}
 
 			// Use prefixed key if it exists
-			if (!key.match(_startsWithRegex)) {
+			if (_startsWithRegex.test(key)) {
 				key = Animator.findPrefix(key);
 			}
 			newFrame[key] = val;
@@ -427,11 +427,11 @@ Internal = {
 		var key, isTransform;
 
 		for (key in from) {
-			if (key.match(_startsWithRegex)) {
+			if (_startsWithRegex.test(key)) {
 				continue;
 			}
 
-			isTransform = key.match(_isTransform);
+			isTransform = _isTransform.test(key);
 			if (!isTransform && base[key]) {
 				continue;
 			}
@@ -455,11 +455,11 @@ Internal = {
 			key;
 
 		for (key in to) {
-			if (key.match(_isTransform)) {
+			if (_isTransform.test(key)) {
 				// Never use computed style for transforms or we lose
 				// our transforms to a matrix
 				from[key] = Animator.parseTransformString(element.style[key]);
-			} else if (key.match(_startsWithRegex)) {
+			} else if (_startsWithRegex.test(key)) {
 				from[key] = to[key];
 			} else {
 				from[key] = element.style[key] || cStyle[key] || 0;
