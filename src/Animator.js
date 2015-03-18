@@ -2,7 +2,7 @@
 
 var Animator, Internal, _typeOf, _toStringRegex, _isElementRegex,
 	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex,
-	_unitRegex, _timingRegex, _isTransform, _dateNow,
+	_unitRegex, _timingRegex, _dateNow, _containsCSSFunc,
 	_getComputedStyle, _parseTransformRegex, _replacePipeRegex, _replaceSpaceRegex;
 
 _toStringRegex   = /(\[object\ |\])/g;
@@ -10,7 +10,7 @@ _isElementRegex  = /html[\w]*element/;
 _startsWithRegex = /^_/;
 _unitRegex       = /^[-0-9.]+/;
 _timingRegex     = /-/g;
-_isTransform     = /[Tt]ransform$/;
+_containsCSSFunc = /[()]/;
 _parseTransformRegex = /([0-9\w]+)\(([-0-9,.%\w]*)\)/;
 _replaceSpaceRegex = /[\ \s]/g;
 _replacePipeRegex = /\)/g;
@@ -207,7 +207,7 @@ Internal = {
 	},
 
 	updateTween: function(element, tween, tick){
-		var delta, prop, timing, value;
+		var delta, prop, timing, value, from, to, duration, x;
 
 		if (!tween.from) {
 			tween.from = Internal.getFromTween(element, tween.to);
@@ -227,52 +227,63 @@ Internal = {
 			delta = tween.delta;
 		}
 
+		from = tween.from;
+		to = tween.to;
+		duration = tween.duration;
+
 		timing = tween.from._timing || Animator.TWEENS.LINEAR;
 
-		for (prop in tween.from) {
-			if (_startsWithRegex.test(prop) || !tween.from[prop]) {
+		for (prop in from) {
+			if (_startsWithRegex.test(prop) || !from[prop]) {
 				continue;
 			}
 
-			if (_isTransform.test(prop)) {
-				value = Internal.calculateTransform(
-					tween.from[prop],
-					tween.to[prop],
+			if (from[prop].length) {
+				value = '';
+				for (x = 0; x < from[prop].length; x += 2) {
+					value += ' ';
+					if (delta >= duration) {
+						value += to[prop][x] + to[prop][x + 1];
+						continue;
+					}
+					value += timing(
+						delta,
+						from[prop][x],
+						to[prop][x] - from[prop][x],
+						duration
+					);
+					if (from[prop][x + 1]) {
+						value += from[prop][x + 1];
+					}
+				}
+			} else {
+				value = Internal.calculateCSSFunction(
+					from[prop],
+					to[prop],
 					timing,
 					delta,
-					tween.duration
+					duration
 				);
-			} else {
-				if (delta >= tween.duration) {
-					value = tween.to[prop][0];
-				} else {
-					value = timing(
-						delta,
-						tween.from[prop][0],
-						tween.to[prop][0] - tween.from[prop][0],
-						tween.duration
-					);
-				}
-				if (tween.from[prop][1]) {
-					value += tween.from[prop][1];
-				}
 			}
 
 			element.style[prop] = value;
 		}
 
-		if (delta >= tween.duration) {
+		if (delta >= duration) {
 			return true;
 		} else {
 			return false;
 		}
 	},
 
-	calculateTransform: function(from, to, timing, delta, duration){
+	calculateCSSFunction: function(from, to, timing, delta, duration){
 		var css = '',
 			v, len, currentValue, item, prop;
 
 		for (prop in from) {
+			if (!from[prop]) {
+				continue;
+			}
 			item = prop + '(';
 			len = from[prop].length;
 
@@ -286,6 +297,9 @@ Internal = {
 						to[prop][v] - from[prop][v],
 						duration
 					);
+					if (prop === 'rgb' || (prop === 'rgba' && v < 6)) {
+						currentValue = currentValue >> 0;
+					}
 				}
 				if (from[prop][v + 1]) {
 					currentValue += from[prop][v + 1];
@@ -396,6 +410,10 @@ Internal = {
 			return items;
 		}
 
+		if (_typeOf(items) === 'string') {
+			items = items.split(' ');
+		}
+
 		if (_typeOf(items) !== 'array') {
 			items = [items];
 		}
@@ -417,24 +435,21 @@ Internal = {
 	},
 
 	matchMissingKeys: function(base, from){
-		var key, isTransform;
+		var key;
 
 		for (key in from) {
 			if (_startsWithRegex.test(key)) {
 				continue;
 			}
 
-			isTransform = _isTransform.test(key);
-			if (!isTransform && base[key]) {
-				continue;
-			}
-
-			if (isTransform) {
+			if (_typeOf(from[key]) === 'object') {
 				base[key] = Internal.matchMissingKeys(
 					base[key] || {},
 					from[key]
 				);
-			} else {
+			} else if (!base[key] && (key === 'rgb' || key === 'rgba')) {
+				Internal.fixColor(key, base, from);
+			} else if (!base[key]){
 				base[key] = from[key];
 			}
 		}
@@ -442,21 +457,40 @@ Internal = {
 		return base;
 	},
 
+	fixColor: function(key, base, from){
+		if (key === 'rgb' && base.rgba) {
+			from.rgba = from.rgb;
+			from.rgb = undefined;
+			from.rgba.push(1, '');
+			return;
+		}
+		if (key === 'rgba' && base.rgb) {
+			base.rgba = base.rgb;
+			base.rgb = undefined;
+			base.rgba.push(1, '');
+			return;
+		}
+		base[key] = from[key];
+	},
+
 	getFromTween: function(element, to){
 		var from = {},
 			cStyle = _getComputedStyle(element),
-			key;
+			key, value;
 
 		for (key in to) {
-			if (_isTransform.test(key)) {
-				// Never use computed style for transforms or we lose
-				// our transforms to a matrix
-				from[key] = Animator.parseTransformString(element.style[key]);
-			} else if (_startsWithRegex.test(key)) {
+			if (_startsWithRegex.test(key)) {
 				from[key] = to[key];
-			} else {
-				from[key] = element.style[key] || cStyle[key] || 0;
+				continue;
 			}
+
+			value = element.style[key] || cStyle[key] || 0;
+
+			if (_containsCSSFunc.test(value)) {
+				value = Animator.parseTransformString(value);
+			}
+
+			from[key] = value;
 		}
 
 		from = Internal.convertFrame(from);
