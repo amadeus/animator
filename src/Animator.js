@@ -253,7 +253,9 @@ Internal = {
 						tween.duration
 					);
 				}
-				value = value + (tween.from[prop][1] || 0);
+				if (tween.from[prop][1]) {
+					value += tween.from[prop][1];
+				}
 			}
 
 			element.style[prop] = value;
@@ -274,22 +276,22 @@ Internal = {
 			item = prop + '(';
 			len = from[prop].length;
 
-			for (v = 0; v < len; v++) {
+			for (v = 0; v < len; v += 2) {
 				if (delta >= duration) {
-					currentValue = to[prop][v][0];
+					currentValue = to[prop][v];
 				} else {
 					currentValue = timing(
 						delta,
-						from[prop][v][0],
-						to[prop][v][0] - from[prop][v][0],
+						from[prop][v],
+						to[prop][v] - from[prop][v],
 						duration
 					);
 				}
-				if (from[prop][v][1]) {
-					currentValue += from[prop][v][1];
+				if (from[prop][v + 1]) {
+					currentValue += from[prop][v + 1];
 				}
 				item += currentValue;
-				if (v < from[prop].length - 1) {
+				if (v < from[prop].length - 2) {
 					item += ',';
 				}
 			}
@@ -348,16 +350,21 @@ Internal = {
 	},
 
 	convertTransform: function(transform){
-		var key, value, i, len;
+		var values, key, value, i, len;
 
 		for (key in transform) {
+			values = [];
 			value = transform[key];
 			if (_typeOf(value) !== 'array') {
-				transform[key] = value = [value];
+				value = [value];
 			}
 			for (i = 0, len = value.length; i < len; i++) {
-				value[i] = Internal.getValueAndUnit(value[i], key);
+				values.push.apply(
+					values,
+					Internal.getValueAndUnit(value[i], key)
+				);
 			}
+			transform[key] = values;
 		}
 
 		return transform;
@@ -418,10 +425,7 @@ Internal = {
 			unit = item.replace(_unitRegex, '');
 		}
 
-		// Only add a unit if it exists
-		if (unit || Animator.DEFAULT_UNITS[prop]) {
-			newValue[1] = unit || Animator.DEFAULT_UNITS[prop];
-		}
+		newValue[1] = unit || Animator.DEFAULT_UNITS[prop] || '';
 
 		return newValue;
 	},
