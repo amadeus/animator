@@ -67,27 +67,6 @@ var Animations = {
 };
 
 // Currentl NOT supported/implemented
-var Tween = {
-	element: 'form',
-	tween: [
-		{
-			duration: 2000,
-			callback: function(){
-				// these values have been reached
-			},
-			timing: 'ease-in-out',
-
-			top: 20,
-			transform: {
-				translate3d: [0,0,0],
-				scale: [0,0]
-			}
-		}
-	]
-};
-
-
-// Currentl NOT supported/implemented
 var Spring = {
 	element: 'form',
 	spring: {
@@ -175,6 +154,7 @@ element.style[Animator.findPrefix('transform')] = 'rotate(45deg) translate3d(0, 
 animator
 	.tweenElement(element, 500, {
 		_timing: 'ease-in-out',
+		opacity: 1,
 		transform: {
 			rotate: '0deg'
 		}
