@@ -154,44 +154,45 @@ element.style[Animator.findPrefix('transform')] = 'rotate(45deg) translate3d(0, 
 element.style.background = 'rgba(255,0,0,1)';
 
 
-animator.tweenElement(element, 500, {
-	_timing: 'ease-in-out',
-	backgroundColor: {
-		rgb: [0,0,0]
-	},
-	opacity: 1,
-	transform: {
-		rotate: '0deg'
-	}
-});
+setTimeout(function() {
+	animator.tweenElement(element, 500, {
+		_timing: 'ease-in-out',
+		backgroundColor: {
+			rgb: [0,0,0]
+		},
+		opacity: 1,
+		transform: {
+			rotate: '0deg'
+		}
+	});
 
-animator.tweenElement(element, 500, {
-	_timing: 'ease-in-out',
-	opacity: 0.5,
-	backgroundColor: {
-		rgb: [255,0,176]
-	},
-	transform: {
-		translate3d: [0, 200, 0]
-	}
-});
+	animator.tweenElement(element, 500, {
+		_timing: 'ease-in-out',
+		opacity: 0.5,
+		backgroundColor: {
+			rgb: [255,0,176]
+		},
+		transform: {
+			translate3d: [0, 200, 0]
+		}
+	});
 
-animator.tweenElement(element, 500, {
-	_timing: 'ease-in-out',
-	borderRadius: [100]
-});
+	animator.tweenElement(element, 500, {
+		_timing: 'ease-in-out',
+		borderRadius: [100]
+	});
 
-animator.tweenElement(element, 500, {
-	_timing: 'ease-in-out',
-	borderRadius: [0],
-	opacity: 1,
-	'background-color': {
-		rgba: [255,0,0,1]
-	},
-	transform: {
-		translate3d: [0, 0, 0]
-	}
-});
-
+	animator.tweenElement(element, 500, {
+		_timing: 'ease-in-out',
+		borderRadius: [0],
+		opacity: 1,
+		'background-color': {
+			rgba: [255,0,0,1]
+		},
+		transform: {
+			translate3d: [0, 0, 0]
+		}
+	});
+}, 500);
 
 })();
