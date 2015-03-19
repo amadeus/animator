@@ -1,4 +1,4 @@
-/* global module, define*/
+/* global module, define */
 (function(root, factory) {
 	if (typeof exports === 'object') {
 		module.exports = factory();
@@ -302,37 +302,29 @@ Internal = {
 	},
 
 	updateSpring: function(element, spring, tick){
-		var name, accel, vel, pos, target, style, durp;
+		var name, style;
 
-		target = spring.target;
-		pos    = spring.pos;
-		vel    = spring.vel;
-		accel  = spring.accel;
 		style  = spring.style;
 		tick   = tick / 1000;
 
-		for (name in target) {
-			accel[name] = spring.stiffness * (target[name] - pos[name]) - spring.friction * vel[name];
-			if (Math.abs(accel[name]) < spring.threshold) {
-				accel[name] = 0;
-				vel[name] = 0;
-				pos[name] = target[name];
-			} else {
-				vel[name] += accel[name] * tick;
-				pos[name] += vel[name] * tick;
-			}
-		}
-
 		for (name in style) {
-			durp = Internal.getSpringStyle(style[name], pos);
-			element.style[name] = durp;
+			element.style[name] = Internal.getSpringStyle(
+				style[name],
+				spring,
+				tick
+			);
 		}
 
 		return false;
 	},
 
-	getSpringStyle: function(items, pos, separator){
-		var value = '', name, x;
+	getSpringStyle: function(items, spring, tick, separator){
+		var value = '', name, x, key, accel, vel, pos, target;
+
+		target = spring.target;
+		pos    = spring.pos;
+		vel    = spring.vel;
+		accel  = spring.accel;
 
 		if (items.length) {
 			for (x = 0; x < items.length; x += 2) {
@@ -340,7 +332,22 @@ Internal = {
 				if (x > 0 && separator) {
 					value += separator;
 				}
-				value += typeof pos[items[x]] !== 'undefined' ? pos[items[x]] : items[x];
+				if (typeof pos[items[x]] !== 'undefined') {
+					key = items[x];
+
+					accel[key] = spring.stiffness * (target[key] - pos[key]) - spring.friction * vel[key];
+					if (Math.abs(accel[key]) < spring.threshold) {
+						accel[key] = 0;
+						vel[key] = 0;
+						pos[key] = target[key];
+					} else {
+						vel[key] += accel[key] * tick;
+						pos[key] += vel[key] * tick;
+					}
+					value += pos[key];
+				} else {
+					value +=  items[x];
+				}
 				if (items[x + 1]) {
 					value += items[x + 1];
 				}
@@ -348,7 +355,7 @@ Internal = {
 		} else {
 			for (name in items) {
 				value = name + '(';
-				value += Internal.getSpringStyle(items[name], pos, ',');
+				value += Internal.getSpringStyle(items[name], spring, tick, ',');
 				value += ')';
 			}
 		}
