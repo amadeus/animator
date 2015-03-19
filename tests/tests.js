@@ -155,11 +155,11 @@ setTimeout(function() {
 	animator.tweenElement(element, 500, {
 		_timing: 'ease-in-out',
 		backgroundColor: {
-			rgb: [0,0,0]
+			rgb: [0, 0, 0]
 		},
 		opacity: 1,
 		transform: {
-			scale: [2],
+			scale: 2,
 			rotate: '45deg'
 		}
 	});
@@ -168,7 +168,7 @@ setTimeout(function() {
 		_timing: 'ease-in-out',
 		opacity: 0.5,
 		backgroundColor: {
-			rgb: [255,0,176]
+			rgb: [255, 0, 176]
 		},
 		transform: {
 			translate3d: [0, 200, 0],
@@ -179,7 +179,7 @@ setTimeout(function() {
 
 	animator.tweenElement(element, 500, {
 		_timing: 'ease-in-out',
-		borderRadius: [100]
+		borderRadius: 100
 	});
 
 	animator.tweenElement(element, 500, {
