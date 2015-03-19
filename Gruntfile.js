@@ -3,8 +3,21 @@ module.exports = function(grunt){ 'use strict';
 
 grunt.loadNpmTasks('grunt-contrib-connect');
 grunt.loadNpmTasks('grunt-contrib-uglify');
+grunt.loadNpmTasks('grunt-contrib-watch');
 
 grunt.initConfig({
+
+	watch: {
+		dist: {
+			files: 'src/*',
+			tasks: 'uglify:standard',
+			options: {
+				interrupt: true,
+				spawn: false,
+				verbose: true
+			}
+		}
+	},
 
 	connect: {
 		serve: {
