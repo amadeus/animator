@@ -23,11 +23,11 @@ There's also a stress test located at `tests/stress.html`.
 * Pausable
 * Handles simultaneous synced animations
 * Animations are queued automatically
-* Automatic vendor prefixing support
-* Full CSS transforms support (does not shim browser that don't support it)
+* Automatic handles vendor prefixing
+* Full CSS transforms support (does not provide a shim however)
 * IE8+ compatibility
 * No external libs required
-* Individual keyframe callback support
+* Individual keyframe and tween callback support
 * Keyframe animation support akin to CSS animation API
 * Utilizes requestAnimationFrame where possible
 * Support for multi attribute CSS properties
