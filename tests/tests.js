@@ -160,7 +160,18 @@ setTimeout(function() {
 		opacity: 1,
 		transform: {
 			scale: 2,
-			rotate: '45deg'
+			rotate: '180deg'
+		}
+	});
+
+	animator.tweenElement(element, 700, {
+		_timing: 'ease-in-out',
+		backgroundColor: {
+			rgba: [0, 0, 255, 0.5]
+		},
+		transform: {
+			scale: 1,
+			rotate: '0deg'
 		}
 	});
 
