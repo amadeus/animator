@@ -66,18 +66,6 @@ var Animations = {
 	}
 };
 
-// Currentl NOT supported/implemented
-var Spring = {
-	element: 'form',
-	spring: {
-		stiffness : 70,
-		friction  : 10,
-		threshold : 0.03,
-		callback: function(){}, // rando callback... wuuuut
-		target: {}
-	}
-};
-
 var animator       = new Animator(),
 	form           = document.getElementById('form'),
 	select         = document.getElementById('animations'),
