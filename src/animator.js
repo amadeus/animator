@@ -30,7 +30,7 @@ REGEX = {
 	defaultPixel     : /(translate|perspective|top|left|bottom|right|height|width|margin|padding|border)/,
 	containsCSSFunc  : /[()]/,
 	parseCSSFunction : /([0-9\w]+)\(([-0-9,.%\w]*)\)/,
-	isTransform      : /transform/,
+	isTransform      : /[tT]ransform/,
 	springParse      : /\[([\w\d]+)\]([-0-9,.%\w]*)/
 };
 
