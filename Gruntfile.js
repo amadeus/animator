@@ -48,7 +48,7 @@ grunt.initConfig({
 				comments: false
 			},
 			files: {
-				'dist/Animator.min.js': ['src/Animator.js']
+				'dist/animator.min.js': ['src/animator.js']
 			}
 		}
 	}

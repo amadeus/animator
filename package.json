@@ -1,8 +1,8 @@
 {
-  "name": "Animator",
+  "name": "animatorjs",
   "version": "0.1.0",
   "description": "Das Ah-knee-may-tor",
-  "main": "Animator.js",
+  "main": "src/animator.js",
   "dependencies": {
     "connect": "^3.3.4",
     "grunt": "^0.4.5",
