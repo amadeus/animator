@@ -26,9 +26,11 @@ REGEX = {
 	replacePipe      : /\)/g,
 	isColorFunc      : /^(rgb|hsl)/,
 	replaceSpace     : /[\ \s]/g,
+	isScale          : /scale/,
 	defaultPixel     : /(translate|perspective|top|left|bottom|right|height|width|margin|padding|border)/,
 	containsCSSFunc  : /[()]/,
-	parseCSSFunction : /([0-9\w]+)\(([-0-9,.%\w]*)\)/
+	parseCSSFunction : /([0-9\w]+)\(([-0-9,.%\w]*)\)/,
+	isTransform      : /transform/
 };
 
 // Simple typeOf checker
@@ -456,7 +458,9 @@ Internal = {
 				continue;
 			}
 
-			if (_typeOf(from[key]) === 'object') {
+			if (REGEX.isTransform.test(key)) {
+				Internal.fixTransform(base[key], from[key]);
+			} else if (_typeOf(from[key]) === 'object') {
 				base[key] = Internal.matchMissingKeys(
 					base[key] || {},
 					from[key]
@@ -521,8 +525,9 @@ Internal = {
 			}
 
 			value = element.style[key] || cStyle[key] || 0;
-
-			if (REGEX.containsCSSFunc.test(value)) {
+			if (REGEX.isTransform.test(key) && value === 'none') {
+				value = {};
+			} else if (REGEX.containsCSSFunc.test(value)) {
 				value = Animator.parseCSSFunctionString(value);
 			}
 
@@ -533,6 +538,39 @@ Internal = {
 		Internal.matchMissingKeys(to, from);
 
 		return from;
+	},
+
+	fixTransform: function(toTransform, fromTransform){
+		var prop, x, isUnit;
+
+		// Create default/zero transforms that don't
+		// exist on the fromObject
+		for (prop in toTransform) {
+			// fromTransform
+			if (fromTransform[prop]) {
+				continue;
+			}
+
+			fromTransform[prop] = [];
+
+			for (x = 0; x < toTransform[prop].length; x++) {
+				isUnit = x % 2;
+				if (isUnit) {
+					fromTransform[prop][x] = toTransform[prop][x];
+				} else {
+					// Scale properties should default to 1,
+					// everything else should default to 0
+					fromTransform[prop][x] = REGEX.isScale.test(prop) ? 1 : 0;
+				}
+			}
+		}
+
+		for (prop in fromTransform) {
+			if (toTransform[prop]) {
+				continue;
+			}
+			toTransform[prop] = fromTransform[prop];
+		}
 	}
 
 };

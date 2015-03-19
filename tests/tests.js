@@ -150,9 +150,6 @@ pauseResume.addEventListener('click', function(event){
 var element = document.getElementById('animate');
 
 element.style.opacity = 0;
-element.style[Animator.findPrefix('transform')] = 'rotate(45deg) translate3d(0, 20px, 10px)';
-element.style.background = 'rgba(255,0,0,1)';
-
 
 setTimeout(function() {
 	animator.tweenElement(element, 500, {
@@ -162,7 +159,8 @@ setTimeout(function() {
 		},
 		opacity: 1,
 		transform: {
-			rotate: '0deg'
+			scale: [2],
+			rotate: '45deg'
 		}
 	});
 
@@ -173,7 +171,9 @@ setTimeout(function() {
 			rgb: [255,0,176]
 		},
 		transform: {
-			translate3d: [0, 200, 0]
+			translate3d: [0, 200, 0],
+			rotate: '0deg',
+			scale: 1
 		}
 	});
 
@@ -193,6 +193,7 @@ setTimeout(function() {
 			translate3d: [0, 0, 0]
 		}
 	});
+
 }, 500);
 
 })();
