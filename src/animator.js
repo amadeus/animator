@@ -31,7 +31,7 @@ REGEX = {
 	containsCSSFunc  : /[()]/,
 	parseCSSFunction : /([0-9\w]+)\(([-0-9,.%\w]*)\)/,
 	isTransform      : /[tT]ransform/,
-	springParse      : /\[([\w\d]+)\]([-0-9,.%\w]*)/
+	springParse      : /[\[{]([\w\d]+)[\]}]([-0-9,.%\w]*)/
 };
 
 // Simple typeOf checker
@@ -655,15 +655,23 @@ Internal = {
 		}
 	},
 
-	setupSpring: function(settings){
-		var name;
-		settings.type = 'spring';
-		// settings.paused = true;
+	setupSpring: function(element, settings){
+		var name, previousSettings;
+
+		// If there is a spring already set on the current element, update its
+		// values, I probably need to do more about templating though.
+		previousSettings = Internal.elements[element._springID];
+		if (previousSettings) {
+			previousSettings[0].stiffness = settings.stiffness;
+			previousSettings[0].friction = settings.friction;
+			return;
+		}
 
 		if (settings.style) {
 			settings.style = Internal.convertObject(settings.style);
 		}
 
+		settings.type = 'spring';
 		settings.pos   = {};
 		settings.vel   = {};
 		settings.accel = {};
@@ -672,6 +680,8 @@ Internal = {
 			settings.vel[name]   = 0;
 			settings.accel[name] = 0;
 		}
+
+		Internal.addItem('spring', element, settings);
 	}
 
 };
@@ -715,8 +725,7 @@ Animator.prototype = {
 			throw new TypeError('Animator.springElement spring settings must be an object: ' + settings);
 		}
 
-		Internal.setupSpring(settings);
-		Internal.addItem('spring', element, settings);
+		Internal.setupSpring(element, settings);
 
 		return this;
 	},
@@ -777,6 +786,22 @@ Animator.prototype = {
 		);
 
 		Internal.addItem('tween', element, tweens);
+
+		return this;
+	},
+
+	removeSpring: function(element){
+		if (_typeOf(element) === 'spring') {
+			element = document.getElementById(element);
+		}
+
+		if (!element || !element._springID) {
+			return this;
+		}
+
+		if (Internal.isRunning) {
+			Internal.toRemove.push(element._springID);
+		}
 
 		return this;
 	},
