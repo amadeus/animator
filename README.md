@@ -135,9 +135,11 @@ npm install
 grunt serve
 ```
 
-Checkout the file `tests/tests.js` to see how the API is used
+Urls to check out with the grunt server:
 
-There's also a stress test located at `tests/stress.html`.
+* `http://localhost:5000/tests/` - tween and animation API examples
+* `http://localhost:5000/tests/spring.html` - spring example
+* `http://localhost:5000/tests/stress.html` - tween stress test
 
 
 ## Current Features
