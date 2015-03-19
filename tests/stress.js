@@ -1,4 +1,3 @@
-// jshint ignore:start
 (function(){
 
 var _requestAnimationFrame =
@@ -18,29 +17,54 @@ var randomInt = function(min, max){
 
 var animator = new Animator();
 
-var removeNode = function(el, tween){
-	el.parentNode.removeChild(el);
-	el = null;
-	counter--;
+var elementPool = [];
+
+var getElementFromPool = function(duration){
+	var el;
+
+	if (elementPool.length) {
+		el = elementPool.shift();
+		resetElement(el, duration);
+		return el;
+	}
+
+	el = document.createElement('div');
+	el.className = 'box';
+
+	resetElement(el, duration);
+
+	document.body.appendChild(el);
+
+	return el;
 };
 
-var createBlock = function(){
-	var el = document.createElement('div');
-	el.className = 'box';
+var resetElement = function(el, duration) {
 	el.style.backgroundColor = 'rgb(' +
 		randomInt(0, 255) + ',' +
 		randomInt(0, 255) + ',' +
 		randomInt(0, 255) + ')';
 
 	var left = randomInt(-10, window.innerWidth);
-	var duration = randomInt(1000, 3000);
 	var scale = 1 - (duration - 1000) / 2000;
 	el.style.left = left + 'px';
+	el.style.opacity = 1;
 	el.style.width =  (10 * scale) + 'px';
 	el.style.height = (10 * scale) + 'px';
-	el.style[Animator.findPrefix('transform')] = 'translate3d(0,-10px,0)';
+	el.style[Animator.findPrefix('transform')] = 'translate3d(0,-20px,0)';
+};
 
-	document.body.appendChild(el);
+var poolElement = function(el){
+	elementPool.push(el);
+};
+
+var removeNode = function(el, tween){
+	poolElement(el);
+	counter--;
+};
+
+var createBlock = function(){
+	var duration = randomInt(1000, 3000);
+	var el = getElementFromPool(duration);
 
 	animator.tweenElement(el, duration, {
 		opacity: 0,
@@ -56,7 +80,7 @@ var createBlock = function(){
 };
 
 var func = function(){
-	for (var x = 0; x < 4; x++) {
+	for (var x = 0; x < 5; x++) {
 		createBlock();
 	}
 
