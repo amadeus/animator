@@ -341,14 +341,14 @@ Internal = {
 	},
 
 	updateSpring: function(element, spring, tick){
-		var name, style;
+		var name, styles;
 
-		style  = spring.style;
+		styles  = spring.styles;
 		tick   = tick / 1000;
 
-		for (name in style) {
+		for (name in styles) {
 			element.style[name] = Internal.getSpringStyle(
-				style[name],
+				styles[name],
 				spring,
 				tick
 			);
@@ -667,8 +667,8 @@ Internal = {
 			return;
 		}
 
-		if (settings.style) {
-			settings.style = Internal.convertObject(settings.style);
+		if (settings.styles) {
+			settings.styles = Internal.convertObject(settings.styles);
 		}
 
 		settings.type = 'spring';

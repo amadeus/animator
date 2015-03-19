@@ -26,7 +26,7 @@ var setSpring = function(){
 		friction : fric,
 		threshold : 0.03,
 		target: coords,
-		style: {
+		styles: {
 			transform: {
 				translate3d: ['{x}px', '{y}px', '0px']
 			}
