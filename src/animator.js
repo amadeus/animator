@@ -30,7 +30,8 @@ REGEX = {
 	defaultPixel     : /(translate|perspective|top|left|bottom|right|height|width|margin|padding|border)/,
 	containsCSSFunc  : /[()]/,
 	parseCSSFunction : /([0-9\w]+)\(([-0-9,.%\w]*)\)/,
-	isTransform      : /transform/
+	isTransform      : /transform/,
+	springParse      : /\[([\w\d]+)\]([-0-9,.%\w]*)/
 };
 
 // Simple typeOf checker
@@ -107,13 +108,14 @@ Internal = {
 	animating : [],
 	toRemove  : [],
 
-	addTweens: function(element, tweens){
-		var id = element._animatorID,
+	addItem: function(type, element, tween){
+		var idKey = '_' + type + 'ID',
+			id    = element[idKey],
 			previousTweens;
 
 		// Element is currently animating
 		if (!id) {
-			id = element._animatorID = 'anim-' + this._index++;
+			id = element[idKey] = type + '-' + this._index++;
 		}
 
 		previousTweens = this.elements[id];
@@ -121,12 +123,19 @@ Internal = {
 			// this.elements[id] = previousTweens.concat.apply(this.elements[id], tweens);
 			// this.elements[id].element = element;
 			// Trying out apply to reduce garbage... even if it's a bit slower...
-			previousTweens.push.apply(previousTweens, tweens);
-			tweens.length = 0;
+			if (_typeOf(tween) === 'array') {
+				previousTweens.push.apply(previousTweens, tween);
+			} else {
+				previousTweens.push(tween);
+			}
 			return;
 		}
 
-		this.elements[id] = tweens;
+		if (_typeOf(tween) === 'array') {
+			this.elements[id] = tween;
+		} else {
+			this.elements[id] = [tween];
+		}
 		this.elements[id].element = element;
 		this.animating.push(id);
 
@@ -164,7 +173,11 @@ Internal = {
 
 		for (a = 0, len = animating.length; a < len; a++) {
 			anims = Internal.elements[animating[a]];
-			if (anims[0].type === 'tween' && !anims[0].paused) {
+			if (anims[0].paused) {
+				continue;
+			}
+
+			if (anims[0].type === 'tween') {
 				done = Internal.updateTween(anims.element, anims[0], tick);
 				if (done) {
 					if (anims[0].to._callback) {
@@ -178,6 +191,12 @@ Internal = {
 					// toRemove[toRemove.length] = animating[a];
 					toRemove.push(animating[a]);
 				}
+				continue;
+			}
+
+			if (anims[0].type === 'spring') {
+				Internal.updateSpring(anims.element, anims[0], tick);
+				continue;
 			}
 		}
 
@@ -282,6 +301,61 @@ Internal = {
 		}
 	},
 
+	updateSpring: function(element, spring, tick){
+		var name, accel, vel, pos, target, style, durp;
+
+		target = spring.target;
+		pos    = spring.pos;
+		vel    = spring.vel;
+		accel  = spring.accel;
+		style  = spring.style;
+		tick   = tick / 1000;
+
+		for (name in target) {
+			accel[name] = spring.stiffness * (target[name] - pos[name]) - spring.friction * vel[name];
+			if (Math.abs(accel[name]) < spring.threshold) {
+				accel[name] = 0;
+				vel[name] = 0;
+				pos[name] = target[name];
+			} else {
+				vel[name] += accel[name] * tick;
+				pos[name] += vel[name] * tick;
+			}
+		}
+
+		for (name in style) {
+			durp = Internal.getSpringStyle(style[name], pos);
+			element.style[name] = durp;
+		}
+
+		return false;
+	},
+
+	getSpringStyle: function(items, pos, separator){
+		var value = '', name, x;
+
+		if (items.length) {
+			for (x = 0; x < items.length; x += 2) {
+				value += ' ';
+				if (x > 0 && separator) {
+					value += separator;
+				}
+				value += typeof pos[items[x]] !== 'undefined' ? pos[items[x]] : items[x];
+				if (items[x + 1]) {
+					value += items[x + 1];
+				}
+			}
+		} else {
+			for (name in items) {
+				value = name + '(';
+				value += Internal.getSpringStyle(items[name], pos, ',');
+				value += ')';
+			}
+		}
+
+		return value;
+	},
+
 	calculateCSSFunction: function(from, to, timing, delta, duration){
 		var css = '',
 			v, len, currentValue, item, prop;
@@ -320,11 +394,6 @@ Internal = {
 		}
 
 		return css;
-	},
-
-	updateSpring: function(element, spring){
-		console.log('Internal.updateSpring not yet implemented');
-		return false;
 	},
 
 	// Converts a JSON frame to valid tween frame - done
@@ -407,7 +476,7 @@ Internal = {
 	},
 
 	getValueAndUnits: function(items, prop){
-		var value, unit, x;
+		var value, unit, x, match;
 
 		if (
 			_typeOf(items) !== 'number' &&
@@ -428,6 +497,13 @@ Internal = {
 		for (x = 0; x < items.length; x += 2) {
 			unit = '';
 			value = parseFloat(items[x]);
+			match = (items[x] + '').match(REGEX.springParse);
+
+			if (match) {
+				items[x] = match[1];
+				items.splice(x + 1, 0, match[2]);
+				continue;
+			}
 
 			if (isNaN(value)) {
 				items.splice(x + 1, 0, '');
@@ -571,6 +647,25 @@ Internal = {
 			}
 			toTransform[prop] = fromTransform[prop];
 		}
+	},
+
+	setupSpring: function(settings){
+		var name;
+		settings.type = 'spring';
+		// settings.paused = true;
+
+		if (settings.style) {
+			settings.style = Internal.convertObject(settings.style);
+		}
+
+		settings.pos   = {};
+		settings.vel   = {};
+		settings.accel = {};
+		for (name in settings.target) {
+			settings.pos[name]   = settings.target[name];
+			settings.vel[name]   = 0;
+			settings.accel[name] = 0;
+		}
 	}
 
 };
@@ -605,7 +700,18 @@ Animator.prototype = {
 		return this;
 	},
 
-	springElement: function(name, physics){
+	springElement: function(element, settings){
+		if (_typeOf(element) === 'string') {
+			element = document.getElementById(element);
+		}
+
+		if (_typeOf(settings) !== 'object') {
+			throw new TypeError('Animator.springElement spring settings must be an object: ' + settings);
+		}
+
+		Internal.setupSpring(settings);
+		Internal.addItem('spring', element, settings);
+
 		return this;
 	},
 
@@ -637,7 +743,7 @@ Animator.prototype = {
 			to       : to
 		};
 
-		Internal.addTweens(element, [tween]);
+		Internal.addItem('tween', element, tween);
 
 		return this;
 	},
@@ -664,7 +770,7 @@ Animator.prototype = {
 			duration
 		);
 
-		Internal.addTweens(element, tweens);
+		Internal.addItem('tween', element, tweens);
 
 		return this;
 	},
@@ -674,12 +780,12 @@ Animator.prototype = {
 			element = document.getElementById(element);
 		}
 
-		if (!element || !element._animatorID) {
+		if (!element || !element._tweenID) {
 			return this;
 		}
 
 		if (Internal.isRunning) {
-			Internal.toRemove.push(element._animatorID);
+			Internal.toRemove.push(element._tweenID);
 		}
 
 		return this;
@@ -690,12 +796,12 @@ Animator.prototype = {
 			element = document.getElementById(element);
 		}
 
-		if (!element || !element._animatorID) {
+		if (!element || !element._tweenID) {
 			return this;
 		}
 
-		if (Internal.elements[element._animatorID]) {
-			Internal.elements[element._animatorID][0].paused = true;
+		if (Internal.elements[element._tweenID]) {
+			Internal.elements[element._tweenID][0].paused = true;
 		}
 
 		return this;
@@ -706,12 +812,12 @@ Animator.prototype = {
 			element = document.getElementById(element);
 		}
 
-		if (!element && !element._animatorID) {
+		if (!element && !element._tweenID) {
 			return this;
 		}
 
-		if (Internal.elements[element._animatorID]) {
-			Internal.elements[element._animatorID][0].paused = false;
+		if (Internal.elements[element._tweenID]) {
+			Internal.elements[element._tweenID][0].paused = false;
 		}
 
 		return this;
@@ -722,12 +828,12 @@ Animator.prototype = {
 			element = document.getElementById(element);
 		}
 
-		if (!element || !element._animatorID) {
+		if (!element || !element._tweenID) {
 			return null;
 		}
 
-		if (Internal.elements[element._animatorID]) {
-			return Internal.elements[element._animatorID][0];
+		if (Internal.elements[element._tweenID]) {
+			return Internal.elements[element._tweenID][0];
 		}
 
 		return null;
