@@ -110,6 +110,19 @@
 	<div class="container">
 		<div class="to-animate" id="animate"></div>
 	</div>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/stats.js/r11/Stats.js" type="text/javascript"></script>
+	<script type="text/javascript">
+		(function(){
+			window.stats = new Stats();
+			window.stats.setMode(0);
+			window.stats.domElement.style.position = 'absolute';
+			window.stats.domElement.style.zIndex = 9999;
+			window.stats.domElement.style.right = '0px';
+			window.stats.domElement.style.top = '0px';
+			document.body.appendChild(window.stats.domElement);
+
+		})();
+	</script>
 	<script src="/dist/animator.min.js" type="text/javascript"></script>
 	<script src="/tests/tests.js" type="text/javascript"></script>
 </body>

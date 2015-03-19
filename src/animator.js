@@ -157,6 +157,9 @@ Internal = {
 			toRemove  = Internal.toRemove,
 			a, len, anims, now, done, index, id, tick;
 
+		if (window.stats) {
+			window.stats.begin();
+		}
 		if (Internal.isRunning) {
 			_requestAnimationFrame(Internal.run);
 		} else {
@@ -221,6 +224,9 @@ Internal = {
 		}
 
 		Internal._last = now;
+		if (window.stats) {
+			window.stats.end();
+		}
 	},
 
 	updateTween: function(element, tween, tick){
