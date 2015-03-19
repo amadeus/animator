@@ -56,44 +56,17 @@ if (!Date.now) {
 _performance = global.performance || {};
 
 if (!_performance.now) {
-	_nowOffset = _dateNow();
-
 	if (
 		_performance.timing &&
 		_performance.timing.navigationStart
 	) {
 		_nowOffset = _performance.timing.navigationStart;
+	} else {
+		_nowOffset = _dateNow();
 	}
 
 	_performance.now = function now(){
 		return _dateNow() - _nowOffset;
-	};
-}
-
-// MDN Function.prototype.bind polyfill
-if (!Function.prototype.bind) {
-	Function.prototype.bind = function (oThis) {
-		var aArgs, fToBind, NOP, fBound;
-
-		if (typeof this !== "function") {
-			throw new TypeError("Function.prototype.bind - what is trying to be bound is not callable");
-		}
-
-		aArgs = Array.prototype.slice.call(arguments, 1);
-		fToBind = this;
-		NOP = function(){};
-
-		fBound = function() {
-			return fToBind.apply(
-				this instanceof NOP && oThis ? this : oThis,
-				aArgs.concat(Array.prototype.slice.call(arguments))
-			);
-		};
-
-		NOP.prototype = this.prototype;
-		fBound.prototype = new NOP();
-
-		return fBound;
 	};
 }
 
