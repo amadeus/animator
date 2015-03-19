@@ -159,6 +159,6 @@ There's also a stress test located at `tests/stress.html`.
 * Add spring physics API
 
 
-## Planned Features
+## Potential Future Features
 
 * Add support for colors OTHER than rgb/rgba/hsl/hsla.
