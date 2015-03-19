@@ -13,6 +13,8 @@ springs on individual html elements.  Or something
 
 Checkout the file `tests/tests.js` to see how the API is used
 
+There's also a stress test located at `tests/stress.html`.
+
 
 ## Current Features
 
@@ -28,10 +30,10 @@ Checkout the file `tests/tests.js` to see how the API is used
 * Individual keyframe callback support
 * Keyframe animation support akin to CSS animation API
 * Utilizes requestAnimationFrame where possible
+* Support for multi attribute CSS properties
+* Simple tween API
 
 
 ## Planned Features
 
-* Fix support for multi-attribute css properties that are not transforms
-* Add simple tween API
 * Add spring physics API
