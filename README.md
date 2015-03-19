@@ -147,18 +147,18 @@ Urls to check out with the grunt server running:
 * Keyframe Animation Support
 * Various Tween Easing formulas
 * Pausable
-* Handles simultaneous synced animations
-* Animations are queued automatically
-* Automatic handles vendor prefixing
+* Simultaneous elements can be animated and synced
+* Animations queued automatically
+* Automatically handles vendor prefixing
 * Full CSS transforms support
-* IE8+ compatibility (not for transforms though)
+* IE8+ compatibility (not for transforms)
 * No external libs required
 * Individual keyframe and tween callback support
-* Keyframe animation support akin to CSS animation API
 * Utilizes requestAnimationFrame where possible
 * Support for multi attribute CSS properties
 * Simple tween API
-* Add spring physics API
+* Spring physics API
+* Only rgb/rgba/hsl/hsla colors are tweenable
 
 
 ## Potential Future Features
