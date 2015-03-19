@@ -230,7 +230,7 @@ Internal = {
 	},
 
 	updateTween: function(element, tween, tick){
-		var delta, prop, timing, value, from, to, duration, x;
+		var delta, prop, timing, from, to, duration;
 
 		if (!tween.from) {
 			tween.from = Internal.getFromTween(element, tween.to);
@@ -261,43 +261,13 @@ Internal = {
 				continue;
 			}
 
-			if (from[prop].length) {
-				value = '';
-				for (x = 0; x < from[prop].length; x += 2) {
-					value += ' ';
-					if (delta >= duration) {
-						value += to[prop][x] + to[prop][x + 1];
-						continue;
-					}
-
-					// String CSS values that cannot be tweened, will
-					// simply accept the from value until the animation
-					// is finished
-					if (from[prop][x].length) {
-						value += from[prop][x];
-					} else {
-						value += timing(
-							delta,
-							from[prop][x],
-							to[prop][x] - from[prop][x],
-							duration
-						);
-					}
-					if (from[prop][x + 1]) {
-						value += from[prop][x + 1];
-					}
-				}
-			} else {
-				value = Internal.calculateCSSFunction(
-					from[prop],
-					to[prop],
-					timing,
-					delta,
-					duration
-				);
-			}
-
-			element.style[prop] = value;
+			element.style[prop] = Internal.getTweenStyle(
+				from[prop],
+				to[prop],
+				timing,
+				delta,
+				duration
+			);
 		}
 
 		if (delta >= duration) {
@@ -305,6 +275,69 @@ Internal = {
 		} else {
 			return false;
 		}
+	},
+
+	getTweenStyle: function(from, to, timing, delta, duration, separator){
+		var value, x, prop, currentValue;
+		if (from.length) {
+			value = '';
+			for (x = 0; x < from.length; x += 2) {
+				if (x > 0) {
+					if (separator) {
+						value += separator;
+					}
+					value += ' ';
+				}
+
+				if (delta >= duration) {
+					value += to[x] + to[x + 1];
+					continue;
+				}
+
+				// String CSS values that cannot be tweened, will
+				// simply accept the from value until the animation
+				// is finished
+				if (from[x].length) {
+					currentValue = from[x];
+				} else {
+					currentValue = timing(
+						delta,
+						from[x],
+						to[x] - from[x],
+						duration
+					);
+				}
+
+				if (from[x + 1] === 'int') {
+					currentValue = currentValue >> 0;
+				} else if (from[x + 1]) {
+					currentValue += from[x + 1];
+				}
+
+				value += currentValue;
+			}
+		} else {
+			value = '';
+			for (prop in from) {
+				if (!from[prop]) {
+					continue;
+				}
+
+				value += prop + '(';
+				value += Internal.getTweenStyle(
+					from[prop],
+					to[prop],
+					timing,
+					delta,
+					duration,
+					','
+				);
+
+				value += ') ';
+			}
+		}
+
+		return value;
 	},
 
 	updateSpring: function(element, spring, tick){
@@ -367,46 +400,6 @@ Internal = {
 		}
 
 		return value;
-	},
-
-	calculateCSSFunction: function(from, to, timing, delta, duration){
-		var css = '',
-			v, len, currentValue, item, prop;
-
-		for (prop in from) {
-			if (!from[prop]) {
-				continue;
-			}
-			item = prop + '(';
-			len = from[prop].length;
-
-			for (v = 0; v < len; v += 2) {
-				if (delta >= duration) {
-					currentValue = to[prop][v];
-				} else {
-					currentValue = timing(
-						delta,
-						from[prop][v],
-						to[prop][v] - from[prop][v],
-						duration
-					);
-				}
-				if (from[prop][v + 1] === 'int') {
-					currentValue = currentValue >> 0;
-				} else if (from[prop][v + 1]) {
-					currentValue += from[prop][v + 1];
-				}
-				item += currentValue;
-				if (v < from[prop].length - 2) {
-					item += ',';
-				}
-			}
-
-			item += ')';
-			css += ' ' + item;
-		}
-
-		return css;
 	},
 
 	// Converts a JSON frame to valid tween frame - done
