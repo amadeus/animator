@@ -15,7 +15,7 @@ REGEX = {
 	replacePipe: /\)/g,
 	isColorFunc: /^(rgb|hsl)/,
 	camelCase: /-\D/g,
-	defaultPixel: /(translate3d|translate|translateX|translateY|translateZ|perspective|top|left|bottom|right|height|width|margin|padding|border)/
+	defaultPixel: /(translate|perspective|top|left|bottom|right|height|width|margin|padding|border)/
 };
 
 // Simple typeOf checker
