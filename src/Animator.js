@@ -4,18 +4,18 @@ var Animator, REGEX, Internal, _typeOf, _requestAnimationFrame, _performance,
 	_nowOffset, _dateNow, _getComputedStyle, _toCamelCase;
 
 REGEX = {
-	toString: /(\[object\ |\])/g,
-	isElement: /html[\w]*element/,
-	startsWith: /^_/,
-	unit: /^[-0-9.]+/,
-	timing: /-/g,
-	containsCSSFunc: /[()]/,
-	parseTransform: /([0-9\w]+)\(([-0-9,.%\w]*)\)/,
-	replaceSpace: /[\ \s]/g,
-	replacePipe: /\)/g,
-	isColorFunc: /^(rgb|hsl)/,
-	camelCase: /-\D/g,
-	defaultPixel: /(translate|perspective|top|left|bottom|right|height|width|margin|padding|border)/
+	digit            : /^[-0-9.]+/,
+	timing           : /-/g,
+	toString         : /(\[object\ |\])/g,
+	isElement        : /html[\w]*element/,
+	camelCase        : /-\D/g,
+	startsWith       : /^_/,
+	replacePipe      : /\)/g,
+	isColorFunc      : /^(rgb|hsl)/,
+	replaceSpace     : /[\ \s]/g,
+	defaultPixel     : /(translate|perspective|top|left|bottom|right|height|width|margin|padding|border)/,
+	containsCSSFunc  : /[()]/,
+	parseCSSFunction : /([0-9\w]+)\(([-0-9,.%\w]*)\)/
 };
 
 // Simple typeOf checker
@@ -446,7 +446,7 @@ Internal = {
 				continue;
 			}
 			if (items[x] && items[x].replace) {
-				unit = items[x].replace(REGEX.unit, '');
+				unit = items[x].replace(REGEX.digit, '');
 			}
 			if (!unit && REGEX.defaultPixel.test(prop)) {
 				unit = 'px';
@@ -730,7 +730,7 @@ Animator.parseCSSFunctionString = function(string){
 	transforms = {};
 
 	for (x = 0; x < styles.length; x++) {
-		match = styles[x].match(REGEX.parseTransform);
+		match = styles[x].match(REGEX.parseCSSFunction);
 		if (!match || match.length <= 2) {
 			continue;
 		}
