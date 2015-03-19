@@ -1,33 +1,32 @@
 (function(global){
 
-var Animator, Internal, _typeOf, _toStringRegex, _isElementRegex,
-	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex,
-	_unitRegex, _timingRegex, _dateNow, _containsCSSFunc, _defaultPixelRegex,
-	_getComputedStyle, _parseTransformRegex, _replacePipeRegex,
-	_replaceSpaceRegex, _isColorFunc, _camelCaseRegex, _toCamelCase;
+var Animator, REGEX, Internal, _typeOf, _requestAnimationFrame, _performance,
+	_nowOffset, _dateNow, _getComputedStyle, _toCamelCase;
 
-_toStringRegex   = /(\[object\ |\])/g;
-_isElementRegex  = /html[\w]*element/;
-_startsWithRegex = /^_/;
-_unitRegex       = /^[-0-9.]+/;
-_timingRegex     = /-/g;
-_containsCSSFunc = /[()]/;
-_parseTransformRegex = /([0-9\w]+)\(([-0-9,.%\w]*)\)/;
-_replaceSpaceRegex = /[\ \s]/g;
-_replacePipeRegex = /\)/g;
-_isColorFunc = /^(rgb|hsl)/;
-_camelCaseRegex = /-\D/g;
-_defaultPixelRegex = /(translate3d|translate|translateX|translateY|translateZ|perspective|top|left|bottom|right|height|width|margin|padding|border)/;
+REGEX = {
+	toString: /(\[object\ |\])/g,
+	isElement: /html[\w]*element/,
+	startsWith: /^_/,
+	unit: /^[-0-9.]+/,
+	timing: /-/g,
+	containsCSSFunc: /[()]/,
+	parseTransform: /([0-9\w]+)\(([-0-9,.%\w]*)\)/,
+	replaceSpace: /[\ \s]/g,
+	replacePipe: /\)/g,
+	isColorFunc: /^(rgb|hsl)/,
+	camelCase: /-\D/g,
+	defaultPixel: /(translate3d|translate|translateX|translateY|translateZ|perspective|top|left|bottom|right|height|width|margin|padding|border)/
+};
 
 // Simple typeOf checker
 _typeOf = function(toTest){
 	var type;
 
 	type = Object.prototype.toString.call(toTest)
-		.replace(_toStringRegex, '')
+		.replace(REGEX.toString, '')
 		.toLowerCase();
 
-	if (_isElementRegex.test(type)) {
+	if (REGEX.isElement.test(type)) {
 		return 'element';
 	}
 
@@ -104,7 +103,7 @@ _getComputedStyle = window.getComputedStyle || function(element){
 
 // Copied from MooTools
 _toCamelCase = function(string){
-	return string.replace(_camelCaseRegex, function(match){
+	return string.replace(REGEX.camelCase, function(match){
 		return match.charAt(1).toUpperCase();
 	});
 };
@@ -245,7 +244,7 @@ Internal = {
 		timing = tween.from._timing || Animator.TWEENS.LINEAR;
 
 		for (prop in from) {
-			if (_startsWithRegex.test(prop) || !from[prop]) {
+			if (REGEX.startsWith.test(prop) || !from[prop]) {
 				continue;
 			}
 
@@ -362,7 +361,7 @@ Internal = {
 			}
 
 			if (key === '_timing' && _typeOf(obj[key]) === 'string') {
-				timingKey = obj[key].toUpperCase().replace(_timingRegex, '_');
+				timingKey = obj[key].toUpperCase().replace(REGEX.timing, '_');
 				value = Animator.TWEENS[timingKey] || Animator.TWEENS.LINEAR;
 			} else if (_typeOf(obj[key]) === 'object') {
 				value = Internal.convertObject(obj[key]);
@@ -370,7 +369,7 @@ Internal = {
 				value = Internal.getValueAndUnits(obj[key], key);
 			}
 
-			if (!_startsWithRegex.test(key)) {
+			if (!REGEX.startsWith.test(key)) {
 				key = _toCamelCase(key);
 				key = Animator.findPrefix(key);
 			}
@@ -447,12 +446,12 @@ Internal = {
 				continue;
 			}
 			if (items[x] && items[x].replace) {
-				unit = items[x].replace(_unitRegex, '');
+				unit = items[x].replace(REGEX.unit, '');
 			}
-			if (!unit && _defaultPixelRegex.test(prop)) {
+			if (!unit && REGEX.defaultPixel.test(prop)) {
 				unit = 'px';
 			}
-			if (!unit && _isColorFunc.test(prop) && x <= 4) {
+			if (!unit && REGEX.isColorFunc.test(prop) && x <= 4) {
 				unit = 'int';
 			}
 
@@ -467,7 +466,7 @@ Internal = {
 		var key, x, longer, shorter;
 
 		for (key in from) {
-			if (_startsWithRegex.test(key)) {
+			if (REGEX.startsWith.test(key)) {
 				continue;
 			}
 
@@ -476,8 +475,8 @@ Internal = {
 					base[key] || {},
 					from[key]
 				);
-			} else if (!base[key] && _isColorFunc.test(key)) {
-				Internal.fixColor(key, key.match(_isColorFunc)[0], base, from);
+			} else if (!base[key] && REGEX.isColorFunc.test(key)) {
+				Internal.fixColor(key, key.match(REGEX.isColorFunc)[0], base, from);
 			} else if (!base[key]){
 				base[key] = from[key];
 			}
@@ -530,14 +529,14 @@ Internal = {
 			key, value;
 
 		for (key in to) {
-			if (_startsWithRegex.test(key)) {
+			if (REGEX.startsWith.test(key)) {
 				from[key] = to[key];
 				continue;
 			}
 
 			value = element.style[key] || cStyle[key] || 0;
 
-			if (_containsCSSFunc.test(value)) {
+			if (REGEX.containsCSSFunc.test(value)) {
 				value = Animator.parseCSSFunctionString(value);
 			}
 
@@ -717,21 +716,21 @@ Animator.parseCSSFunctionString = function(string){
 
 	if (
 		_typeOf(string) !== 'string' ||
-		!_containsCSSFunc.test(string)
+		!REGEX.containsCSSFunc.test(string)
 	) {
 		return undefined;
 	}
 
 	// Clean out whitespace and add split separator
 	string = string
-		.replace(_replaceSpaceRegex, '')
-		.replace(_replacePipeRegex, ')|');
+		.replace(REGEX.replaceSpace, '')
+		.replace(REGEX.replacePipe, ')|');
 
 	styles = string.split('|');
 	transforms = {};
 
 	for (x = 0; x < styles.length; x++) {
-		match = styles[x].match(_parseTransformRegex);
+		match = styles[x].match(REGEX.parseTransform);
 		if (!match || match.length <= 2) {
 			continue;
 		}
