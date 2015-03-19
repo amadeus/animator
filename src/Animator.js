@@ -1,27 +1,32 @@
 (function(global){
 
-var Animator, Internal, _typeOf, _toStringRegex, _isElementRegex,
-	_requestAnimationFrame, _performance, _nowOffset, _startsWithRegex,
-	_unitRegex, _timingRegex, _isTransform, _dateNow,
-	_getComputedStyle, _parseTransformRegex;
+var Animator, REGEX, Internal, _typeOf, _requestAnimationFrame, _performance,
+	_nowOffset, _dateNow, _getComputedStyle, _toCamelCase;
 
-_toStringRegex   = /(\[object\ |\])/g;
-_isElementRegex  = /html[\w]*element/;
-_startsWithRegex = /^_/;
-_unitRegex       = /^[-0-9.]+/;
-_timingRegex     = /-/g;
-_isTransform     = /[Tt]ransform$/;
-_parseTransformRegex = /([0-9\w]+)\(([-0-9,.\w]*)\)/;
+REGEX = {
+	digit            : /^[-0-9.]+/,
+	timing           : /-/g,
+	toString         : /(\[object\ |\])/g,
+	isElement        : /html[\w]*element/,
+	camelCase        : /-\D/g,
+	startsWith       : /^_/,
+	replacePipe      : /\)/g,
+	isColorFunc      : /^(rgb|hsl)/,
+	replaceSpace     : /[\ \s]/g,
+	defaultPixel     : /(translate|perspective|top|left|bottom|right|height|width|margin|padding|border)/,
+	containsCSSFunc  : /[()]/,
+	parseCSSFunction : /([0-9\w]+)\(([-0-9,.%\w]*)\)/
+};
 
 // Simple typeOf checker
 _typeOf = function(toTest){
 	var type;
 
 	type = Object.prototype.toString.call(toTest)
-		.replace(_toStringRegex, '')
+		.replace(REGEX.toString, '')
 		.toLowerCase();
 
-	if (type.match(_isElementRegex)) {
+	if (REGEX.isElement.test(type)) {
 		return 'element';
 	}
 
@@ -96,6 +101,13 @@ _getComputedStyle = window.getComputedStyle || function(element){
 	return element.style;
 };
 
+// Copied from MooTools
+_toCamelCase = function(string){
+	return string.replace(REGEX.camelCase, function(match){
+		return match.charAt(1).toUpperCase();
+	});
+};
+
 Internal = {
 
 	isRunning: false,
@@ -108,21 +120,28 @@ Internal = {
 	toRemove  : [],
 
 	addTweens: function(element, tweens){
-		var id, previousTweens;
+		var id = element._animatorID,
+			previousTweens;
 
 		// Element is currently animating
-		if (element._animatorID) {
-			id = element._animatorID;
-			previousTweens = this.elements[id];
-			this.elements[id] = previousTweens.concat.apply(this.elements[id], tweens);
-			this.elements[id].element = element;
+		if (!id) {
+			id = element._animatorID = 'anim-' + this._index++;
+		}
+
+		previousTweens = this.elements[id];
+		if (previousTweens) {
+			// this.elements[id] = previousTweens.concat.apply(this.elements[id], tweens);
+			// this.elements[id].element = element;
+			// Trying out apply to reduce garbage... even if it's a bit slower...
+			previousTweens.push.apply(previousTweens, tweens);
+			tweens.length = 0;
 			return;
 		}
 
-		tweens.element = element;
-		id = element._animatorID = 'anim-' + this._index++;
 		this.elements[id] = tweens;
+		this.elements[id].element = element;
 		this.animating.push(id);
+
 		this.start();
 	},
 
@@ -140,27 +159,6 @@ Internal = {
 		var animating = Internal.animating,
 			toRemove  = Internal.toRemove,
 			a, len, anims, now, done, index, id, tick;
-
-		if (toRemove.length) {
-			for (a = 0, len = toRemove.length; a < len; a++) {
-				id = toRemove[a];
-				Internal.elements[id].element._animatorID = undefined;
-				Internal.elements[id] = undefined;
-				index = animating.indexOf(id);
-				if (index >= 0) {
-					animating.splice(index, 1);
-				}
-			}
-
-			// No need to run anymore
-			if (!animating.length) {
-				Internal._last = undefined;
-				Internal.isRunning = false;
-			}
-
-			// Clean out the array
-			toRemove.length = 0;
-		}
 
 		if (Internal.isRunning) {
 			_requestAnimationFrame(Internal.run);
@@ -182,22 +180,44 @@ Internal = {
 				done = Internal.updateTween(anims.element, anims[0], tick);
 				if (done) {
 					if (anims[0].to._callback) {
-						anims[0].to._callback();
+						anims[0].to._callback(anims.element, anims[0]);
 					}
-					anims.shift();
+					// Splice seems to eek out a few small milliseconds over shift
+					anims.splice(0, 1);
 				}
 
 				if (done && !anims.length) {
+					// toRemove[toRemove.length] = animating[a];
 					toRemove.push(animating[a]);
 				}
 			}
+		}
+
+		if (toRemove.length) {
+			for (a = 0, len = toRemove.length; a < len; a++) {
+				id = toRemove[a];
+				Internal.elements[id] = undefined;
+				index = animating.indexOf(id);
+				if (index >= 0) {
+					animating.splice(index, 1);
+				}
+			}
+
+			// No need to run anymore
+			if (!animating.length) {
+				Internal._last = undefined;
+				Internal.isRunning = false;
+			}
+
+			// Clean out the array
+			toRemove.length = 0;
 		}
 
 		Internal._last = now;
 	},
 
 	updateTween: function(element, tween, tick){
-		var delta, prop, timing, value;
+		var delta, prop, timing, value, from, to, duration, x;
 
 		if (!tween.from) {
 			tween.from = Internal.getFromTween(element, tween.to);
@@ -217,67 +237,101 @@ Internal = {
 			delta = tween.delta;
 		}
 
+		from = tween.from;
+		to = tween.to;
+		duration = tween.duration;
+
 		timing = tween.from._timing || Animator.TWEENS.LINEAR;
 
-		for (prop in tween.from) {
-			if (prop.match(_startsWithRegex) || !tween.from[prop]) {
+		for (prop in from) {
+			if (REGEX.startsWith.test(prop) || !from[prop]) {
 				continue;
 			}
 
-			if (prop.match(_isTransform)) {
-				value = Internal.calculateTransform(
-					tween.from[prop],
-					tween.to[prop],
+			if (from[prop].length) {
+				value = '';
+				for (x = 0; x < from[prop].length; x += 2) {
+					value += ' ';
+					if (delta >= duration) {
+						value += to[prop][x] + to[prop][x + 1];
+						continue;
+					}
+
+					// String CSS values that cannot be tweened, will
+					// simply accept the from value until the animation
+					// is finished
+					if (from[prop][x].length) {
+						value += from[prop][x];
+					} else {
+						value += timing(
+							delta,
+							from[prop][x],
+							to[prop][x] - from[prop][x],
+							duration
+						);
+					}
+					if (from[prop][x + 1]) {
+						value += from[prop][x + 1];
+					}
+				}
+			} else {
+				value = Internal.calculateCSSFunction(
+					from[prop],
+					to[prop],
 					timing,
 					delta,
-					tween.duration
+					duration
 				);
-			} else {
-				value = timing(
-					delta,
-					tween.from[prop][0],
-					tween.to[prop][0] - tween.from[prop][0],
-					tween.duration
-				);
-				value = value + (tween.from[prop][1] || '');
 			}
 
 			element.style[prop] = value;
 		}
 
-		if (delta > tween.duration) {
+		if (delta >= duration) {
 			return true;
 		} else {
 			return false;
 		}
 	},
 
-	calculateTransform: function(from, to, timing, delta, duration){
-		var css = [], v, currentValues, item, prop;
+	calculateCSSFunction: function(from, to, timing, delta, duration){
+		var css = '',
+			v, len, currentValue, item, prop;
 
 		for (prop in from) {
+			if (!from[prop]) {
+				continue;
+			}
 			item = prop + '(';
+			len = from[prop].length;
 
-			currentValues = [];
-
-			for (v = 0; v < from[prop].length; v++) {
-				currentValues[v] = timing(
-					delta,
-					from[prop][v][0],
-					to[prop][v][0] - from[prop][v][0],
-					duration
-				);
-				if (from[prop][v][1]) {
-					currentValues[v] += from[prop][v][1];
+			for (v = 0; v < len; v += 2) {
+				if (delta >= duration) {
+					currentValue = to[prop][v];
+				} else {
+					currentValue = timing(
+						delta,
+						from[prop][v],
+						to[prop][v] - from[prop][v],
+						duration
+					);
+				}
+				if (from[prop][v + 1] === 'int') {
+					currentValue = currentValue >> 0;
+				} else if (from[prop][v + 1]) {
+					currentValue += from[prop][v + 1];
+				}
+				item += currentValue;
+				if (v < from[prop].length - 2) {
+					item += ',';
 				}
 			}
-			item += currentValues.join(',');
 
 			item += ')';
-			css.push(item);
+			css += ' ' + item;
 		}
 
-		return css.join(' ');
+		return css;
 	},
 
 	updateSpring: function(element, spring){
@@ -288,36 +342,7 @@ Internal = {
 	// Converts a JSON frame to valid tween frame - done
 	// via duplication, the original frame is not modified
 	convertFrame: function(frame, previousFrame){
-		var newFrame = {},
-			key, timingKey, val;
-
-		if (_typeOf(frame) !== 'object') {
-			return frame;
-		}
-
-		for (key in frame) {
-			if (!frame.hasOwnProperty(key)) {
-				continue;
-			}
-
-			if (key === '_timing' && _typeOf(frame[key]) === 'string') {
-				timingKey = frame[key].toUpperCase().replace(_timingRegex, '_');
-				newFrame[key] = Animator.TWEENS[timingKey];
-				continue;
-			}
-
-			if (key.match(_isTransform)) {
-				val = Internal.convertTransform(frame[key]);
-			} else {
-				val = Internal.getValueAndUnit(frame[key], key);
-			}
-
-			// Use prefixed key if it exists
-			if (!key.match(_startsWithRegex)) {
-				key = Animator.findPrefix(key);
-			}
-			newFrame[key] = val;
-		}
+		var newFrame = Internal.convertObject(frame);
 
 		if (previousFrame) {
 			Internal.matchMissingKeys(newFrame, previousFrame);
@@ -326,20 +351,33 @@ Internal = {
 		return newFrame;
 	},
 
-	convertTransform: function(transform){
-		var key, value, i, len;
+	convertObject: function(obj){
+		var newObject = {},
+			key, timingKey, value;
 
-		for (key in transform) {
-			value = transform[key];
-			if (_typeOf(value) !== 'array') {
-				transform[key] = value = [value];
+		for (key in obj) {
+			if (!obj.hasOwnProperty(key)) {
+				continue;
 			}
-			for (i = 0, len = value.length; i < len; i++) {
-				value[i] = Internal.getValueAndUnit(value[i], key);
+
+			if (key === '_timing' && _typeOf(obj[key]) === 'string') {
+				timingKey = obj[key].toUpperCase().replace(REGEX.timing, '_');
+				value = Animator.TWEENS[timingKey] || Animator.TWEENS.LINEAR;
+			} else if (_typeOf(obj[key]) === 'object') {
+				value = Internal.convertObject(obj[key]);
+			} else {
+				value = Internal.getValueAndUnits(obj[key], key);
 			}
+
+			if (!REGEX.startsWith.test(key)) {
+				key = _toCamelCase(key);
+				key = Animator.findPrefix(key);
+			}
+
+			newObject[key] = value;
 		}
 
-		return transform;
+		return newObject;
 	},
 
 	keyframesToTweens: function(animation, duration){
@@ -380,72 +418,129 @@ Internal = {
 		return tweens;
 	},
 
-	getValueAndUnit: function(item, prop){
-		var value, unit, newValue;
-		// console.log('getValueAndUnit', item, prop);
+	getValueAndUnits: function(items, prop){
+		var value, unit, x;
 
-		if (_typeOf(item) !== 'number' && _typeOf(item) !== 'string') {
-			return item;
+		if (
+			_typeOf(items) !== 'number' &&
+			_typeOf(items) !== 'string' &&
+			_typeOf(items) !== 'array'
+		) {
+			return items;
 		}
 
-		value = parseFloat(item);
-		if (isNaN(value)) {
-			return [item];
+		if (_typeOf(items) === 'string') {
+			items = items.split(' ');
 		}
 
-		newValue = [value];
-		if (item && item.replace) {
-			unit = item.replace(_unitRegex, '');
+		if (_typeOf(items) !== 'array') {
+			items = [items];
 		}
 
-		// Only add a unit if it exists
-		if (unit || Animator.DEFAULT_UNITS[prop]) {
-			newValue[1] = unit || Animator.DEFAULT_UNITS[prop];
+		for (x = 0; x < items.length; x += 2) {
+			unit = '';
+			value = parseFloat(items[x]);
+
+			if (isNaN(value)) {
+				items.splice(x + 1, 0, '');
+				continue;
+			}
+			if (items[x] && items[x].replace) {
+				unit = items[x].replace(REGEX.digit, '');
+			}
+			if (!unit && REGEX.defaultPixel.test(prop)) {
+				unit = 'px';
+			}
+			if (!unit && REGEX.isColorFunc.test(prop) && x <= 4) {
+				unit = 'int';
+			}
+
+			items[x] = value;
+			items.splice(x + 1, 0, unit);
 		}
 
-		return newValue;
+		return items;
 	},
 
 	matchMissingKeys: function(base, from){
-		var key, isTransform;
+		var key, x, longer, shorter;
 
 		for (key in from) {
-			if (key.match(_startsWithRegex)) {
+			if (REGEX.startsWith.test(key)) {
 				continue;
 			}
 
-			isTransform = key.match(_isTransform);
-			if (!isTransform && base[key]) {
-				continue;
-			}
-
-			if (isTransform) {
+			if (_typeOf(from[key]) === 'object') {
 				base[key] = Internal.matchMissingKeys(
 					base[key] || {},
 					from[key]
 				);
-			} else {
+			} else if (!base[key] && REGEX.isColorFunc.test(key)) {
+				Internal.fixColor(key, key.match(REGEX.isColorFunc)[0], base, from);
+			} else if (!base[key]){
 				base[key] = from[key];
+			}
+
+			if (!base[key]) {
+				continue;
+			}
+
+			// Extrapolate differing
+			if (base[key].length !== from[key].length) {
+				if (base[key].length > from[key].length) {
+					longer  = base[key];
+					shorter = from[key];
+				} else {
+					longer  = from[key];
+					shorter = base[key];
+				}
+				for (x = shorter.length - 4; shorter.length < longer.length; x += 2) {
+					if (x < 0) {
+						x = 0;
+					}
+					shorter.push(shorter[x], shorter[x + 1]);
+				}
 			}
 		}
 
 		return base;
 	},
 
+	fixColor: function(key, baseKey, base, from){
+		var key2 = baseKey + 'a';
+		if (from[baseKey] && base[key2]) {
+			from[key2] = from[baseKey];
+			from[baseKey] = undefined;
+			from[key2].push(1, '');
+			return;
+		}
+		if (from[key2] && base[baseKey]) {
+			base[key2] = base[baseKey];
+			base[baseKey] = undefined;
+			base[key2].push(1, '');
+			return;
+		}
+		base[key] = from[key];
+	},
+
 	getFromTween: function(element, to){
 		var from = {},
 			cStyle = _getComputedStyle(element),
-			key, fromTransform;
+			key, value;
 
 		for (key in to) {
-			if (key.match(_isTransform)) {
-				fromTransform = Animator.parseTransformString(element.style[key]);
-				from[key] = fromTransform;
-			} else if (key.match(_startsWithRegex)) {
+			if (REGEX.startsWith.test(key)) {
 				from[key] = to[key];
-			} else {
-				from[key] = element.style[key] || cStyle[key] || 0;
+				continue;
 			}
+
+			value = element.style[key] || cStyle[key] || 0;
+
+			if (REGEX.containsCSSFunc.test(value)) {
+				value = Animator.parseCSSFunctionString(value);
+			}
+
+			from[key] = value;
 		}
 
 		from = Internal.convertFrame(from);
@@ -461,6 +556,10 @@ Animator = function(){
 };
 
 Animator.prototype = {
+
+	isRunning: function(){
+		return Internal.isRunning;
+	},
 
 	addAnimation: function(name, keyframes){
 		var frame, previousFrame;
@@ -555,7 +654,9 @@ Animator.prototype = {
 			return this;
 		}
 
-		Internal.toRemove.push(element._animatorID);
+		if (Internal.isRunning) {
+			Internal.toRemove.push(element._animatorID);
+		}
 
 		return this;
 	},
@@ -569,7 +670,9 @@ Animator.prototype = {
 			return this;
 		}
 
-		Internal.elements[element._animatorID][0].paused = true;
+		if (Internal.elements[element._animatorID]) {
+			Internal.elements[element._animatorID][0].paused = true;
+		}
 
 		return this;
 	},
@@ -583,7 +686,9 @@ Animator.prototype = {
 			return this;
 		}
 
-		Internal.elements[element._animatorID][0].paused = false;
+		if (Internal.elements[element._animatorID]) {
+			Internal.elements[element._animatorID][0].paused = false;
+		}
 
 		return this;
 	},
@@ -597,28 +702,35 @@ Animator.prototype = {
 			return null;
 		}
 
-		return Internal.elements[element._animatorID][0];
+		if (Internal.elements[element._animatorID]) {
+			return Internal.elements[element._animatorID][0];
+		}
+
+		return null;
 	}
 
 };
 
-Animator.parseTransformString = function(string){
+Animator.parseCSSFunctionString = function(string){
 	var x, styles, transforms, match;
 
-	if (_typeOf(string) !== 'string') {
+	if (
+		_typeOf(string) !== 'string' ||
+		!REGEX.containsCSSFunc.test(string)
+	) {
 		return undefined;
 	}
 
 	// Clean out whitespace and add split separator
 	string = string
-		.replace(/[\ \s]/g, '')
-		.replace(/\)/, ')|');
+		.replace(REGEX.replaceSpace, '')
+		.replace(REGEX.replacePipe, ')|');
 
 	styles = string.split('|');
 	transforms = {};
 
 	for (x = 0; x < styles.length; x++) {
-		match = styles[x].match(_parseTransformRegex);
+		match = styles[x].match(REGEX.parseCSSFunction);
 		if (!match || match.length <= 2) {
 			continue;
 		}
@@ -650,24 +762,6 @@ Animator.findPrefix = function(prop){
 	}
 
 	return prop.toLowerCase();
-};
-
-
-Animator.DEFAULT_UNITS = {
-	translate3d : 'px',
-	translate   : 'px',
-	translateX  : 'px',
-	translateY  : 'px',
-	translateZ  : 'px',
-	perspective : 'px',
-
-	top    : 'px',
-	left   : 'px',
-	bottom : 'px',
-	right  : 'px',
-	height : 'px',
-	width  : 'px',
-	margin : 'px'
 };
 
 Animator.TWEENS = {

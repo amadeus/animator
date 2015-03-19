@@ -67,27 +67,6 @@ var Animations = {
 };
 
 // Currentl NOT supported/implemented
-var Tween = {
-	element: 'form',
-	tween: [
-		{
-			duration: 2000,
-			callback: function(){
-				// these values have been reached
-			},
-			timing: 'ease-in-out',
-
-			top: 20,
-			transform: {
-				translate3d: [0,0,0],
-				scale: [0,0]
-			}
-		}
-	]
-};
-
-
-// Currentl NOT supported/implemented
 var Spring = {
 	element: 'form',
 	spring: {
@@ -170,20 +149,50 @@ pauseResume.addEventListener('click', function(event){
 
 var element = document.getElementById('animate');
 
+element.style.opacity = 0;
 element.style[Animator.findPrefix('transform')] = 'rotate(45deg) translate3d(0, 20px, 10px)';
+element.style.background = 'rgba(255,0,0,1)';
 
-animator
-	.tweenElement(element, 500, {
+
+setTimeout(function() {
+	animator.tweenElement(element, 500, {
 		_timing: 'ease-in-out',
+		backgroundColor: {
+			rgb: [0,0,0]
+		},
+		opacity: 1,
 		transform: {
 			rotate: '0deg'
 		}
-	}).tweenElement(element, 500, {
+	});
+
+	animator.tweenElement(element, 500, {
 		_timing: 'ease-in-out',
-		opacity: 0,
+		opacity: 0.5,
+		backgroundColor: {
+			rgb: [255,0,176]
+		},
 		transform: {
 			translate3d: [0, 200, 0]
 		}
 	});
+
+	animator.tweenElement(element, 500, {
+		_timing: 'ease-in-out',
+		borderRadius: [100]
+	});
+
+	animator.tweenElement(element, 500, {
+		_timing: 'ease-in-out',
+		borderRadius: [0],
+		opacity: 1,
+		'background-color': {
+			rgba: [255,0,0,1]
+		},
+		transform: {
+			translate3d: [0, 0, 0]
+		}
+	});
+}, 500);
 
 })();
