@@ -162,3 +162,8 @@ There's also a stress test located at `tests/stress.html`.
 ## Potential Future Features
 
 * Add support for colors OTHER than rgb/rgba/hsl/hsla.
+
+
+## License
+
+[MIT](http://en.wikipedia.org/wiki/MIT_License)
