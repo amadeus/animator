@@ -80,7 +80,7 @@ var createBlock = function(){
 };
 
 var func = function(){
-	for (var x = 0; x < 5; x++) {
+	for (var x = 0; x < 3; x++) {
 		createBlock();
 	}
 
