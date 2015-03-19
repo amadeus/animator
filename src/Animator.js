@@ -1,4 +1,17 @@
-(function(global){
+/* global module, define*/
+(function(root, factory) {
+	if (typeof exports === 'object') {
+		module.exports = factory();
+	} else if (typeof define === 'function' && define.amd) {
+		define(
+			'transformer',
+			[],
+			factory
+		);
+	} else {
+		root.Animator = factory();
+	}
+})(this, function() {
 
 var Animator, REGEX, Internal, _typeOf, _requestAnimationFrame, _performance,
 	_nowOffset, _dateNow, _getComputedStyle, _toCamelCase;
@@ -53,7 +66,7 @@ if (!Date.now) {
 }
 
 // Simple window.performance polyfill
-_performance = global.performance || {};
+_performance = window.performance || {};
 
 if (!_performance.now) {
 	if (
@@ -851,6 +864,6 @@ Animator.TWEENS.EASE_IN     = Animator.TWEENS.EASE_IN_SINE;
 Animator.TWEENS.EASE_OUT    = Animator.TWEENS.EASE_OUT_SINE;
 Animator.TWEENS.EASE_IN_OUT = Animator.TWEENS.EASE_IN_OUT_SINE;
 
-global.Animator = Animator;
+return Animator;
 
-})(this);
+});
