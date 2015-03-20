@@ -159,6 +159,7 @@ Urls to check out with the grunt server running:
 * Simple tween API
 * Spring physics API
 * Only rgb/rgba/hsl/hsla colors are tweenable
+* No jQuery required!
 
 
 ## Potential Future Features
