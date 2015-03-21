@@ -1,7 +1,7 @@
 # Animator
 
 A tiny, standalone, universal high performance animation library for CSS.  The API is
-mostly JSON and mimics the CSS Animation API.  Currently Animator suppots
+mostly JSON and mimics the CSS Animation API.  Currently Animator supports
 tweens, keyframed animations and springs.
 
 ## Example Usage
