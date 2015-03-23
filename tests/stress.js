@@ -72,9 +72,8 @@ var createBlock = function(){
 			translate3d: [0, (window.innerHeight + 20), 0]
 		},
 
-		_timing: 'ease-in',
-		_callback: removeNode
-	});
+		_timing: 'ease-in'
+	}, removeNode);
 
 	counter++;
 };

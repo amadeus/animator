@@ -16,7 +16,7 @@ var Animations = {
 				scale: [1.07, 1.07]
 			},
 			_timing: 'ease-in-out',
-			_callback: function(){
+			_onFrame: function(){
 				console.log('In the middle of the animation');
 			}
 		},
@@ -30,7 +30,7 @@ var Animations = {
 			transform: {
 				scale: [1, 1]
 			},
-			_callback: function(){
+			_onFrame: function(){
 				console.log('Animation is done');
 			}
 		}
@@ -50,7 +50,7 @@ var Animations = {
 				translate3d: [0,-60,0]
 			},
 			_timing: Animator.TWEENS.EASE_OUT_SINE,
-			_callback: function(){} // do something at this point in the animation
+			_onFrame: function(){} // do something at this point in the animation
 		},
 		70: {
 			transform: {
@@ -150,6 +150,8 @@ setTimeout(function() {
 			scale: 2,
 			rotate: '180deg'
 		}
+	}, function(){
+		console.log('Tween finished');
 	});
 
 	animator.tweenElement(element, 700, {

@@ -183,8 +183,11 @@ Internal = {
 			if (anims[0].type === 'tween') {
 				done = Internal.updateTween(anims.element, anims[0], tick);
 				if (done) {
-					if (anims[0].to._callback) {
-						anims[0].to._callback(anims.element, anims[0]);
+					if (anims[0].to._onFrame) {
+						anims[0].to._onFrame(anims.element, anims[0]);
+					}
+					if (anims[0].to._finished) {
+						anims[0].to._finished(anims.element, anims[0]);
 					}
 					// Splice seems to eek out a few small milliseconds over shift
 					anims.splice(0, 1);
@@ -443,7 +446,7 @@ Internal = {
 		return newObject;
 	},
 
-	keyframesToTweens: function(animation, duration){
+	keyframesToTweens: function(animation, duration, finished){
 		var tweens = [],
 			from, to, fromPercent, toPercent, percent, tween;
 
@@ -471,6 +474,10 @@ Internal = {
 
 			from = to;
 			fromPercent = toPercent;
+		}
+
+		if (_typeOf(finished) === 'function') {
+			tweens[tweens.length - 1].to._finished = finished;
 		}
 
 		to   = undefined;
@@ -731,7 +738,7 @@ Animator.prototype = {
 	},
 
 	tweenElement: function(element, duration){
-		var from, to, tween;
+		var from, to, tween, frames, callback;
 		if (_typeOf(element) === 'string') {
 			element = document.getElementById(element);
 		}
@@ -744,11 +751,17 @@ Animator.prototype = {
 			throw new TypeError('Animator.tweenElement: Must provide a valid duration: ' + duration);
 		}
 
-		if (arguments.length >= 4) {
-			from = Internal.convertFrame(arguments[2]);
-			to   = Internal.convertFrame(arguments[3], from);
+		frames = Array.prototype.slice.call(arguments, 2);
+
+		if (_typeOf(frames[frames.length - 1]) === 'function') {
+			callback = frames.pop();
+		}
+
+		if (frames.length >= 2) {
+			from = Internal.convertFrame(frames[0]);
+			to   = Internal.convertFrame(frames[1], from);
 		} else {
-			to = Internal.convertFrame(arguments[2]);
+			to = Internal.convertFrame(frames[0]);
 		}
 
 		tween = {
@@ -758,12 +771,16 @@ Animator.prototype = {
 			to       : to
 		};
 
+		if (callback) {
+			tween.to._finished = callback;
+		}
+
 		Internal.addItem('tween', element, tween);
 
 		return this;
 	},
 
-	animateElement: function(element, animation, duration){
+	animateElement: function(element, animation, duration, finished){
 		var tweens;
 
 		if (_typeOf(element) === 'string') {
@@ -782,7 +799,8 @@ Animator.prototype = {
 
 		tweens = Internal.keyframesToTweens(
 			this._animations[animation],
-			duration
+			duration,
+			finished
 		);
 
 		Internal.addItem('tween', element, tweens);

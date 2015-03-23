@@ -26,11 +26,9 @@ animatorInstance.tweenElement('element-id', 300, {
     opacity: 0,
     transform: {
         translate3d: [0, '50%', 0]
-    },
-
-    _callback: function(){
-        console.log('This method will be fired at the end of the tween');
     }
+}, function(){
+    console.log('This method will be fired at the end of the tween');
 });
 ```
 
@@ -66,7 +64,7 @@ animator.addAnimation('pop', {
             scale: [1.07, 1.07],
         },
         _timing: 'ease-in-out',
-        _callback: function(){
+        _onFrame: function(){
             console.log('This method will be fired at 40% of the way through the animation');
         }
     },
