@@ -694,33 +694,13 @@ Internal = {
 };
 
 Animator = function(){
-	this._animations = {};
+	this._queue = [];
 };
 
 Animator.prototype = {
 
 	isRunning: function(){
 		return Internal.isRunning;
-	},
-
-	addAnimation: function(name, keyframes){
-		var frame, previousFrame;
-
-		if (
-			_typeOf(name)      !== 'string' ||
-			_typeOf(keyframes) !== 'object'
-		) {
-			return this;
-		}
-
-		for (frame in keyframes) {
-			keyframes[frame] = Internal.convertFrame(keyframes[frame], previousFrame);
-			previousFrame = keyframes[frame];
-		}
-
-		this._animations[name] = keyframes;
-
-		return this;
 	},
 
 	springElement: function(element, settings){
@@ -793,12 +773,12 @@ Animator.prototype = {
 
 		duration = duration || 1000;
 
-		if (!this._animations[animation]) {
+		if (!Animator.Animations[animation]) {
 			throw new Error('Animator.animateElement: Animation does not exist: ' + animation);
 		}
 
 		tweens = Internal.keyframesToTweens(
-			this._animations[animation],
+			Animator.Animations[animation],
 			duration,
 			finished
 		);
@@ -888,6 +868,28 @@ Animator.prototype = {
 		return null;
 	}
 
+};
+
+Animator.Animations = {};
+
+Animator.addAnimation = function(name, keyframes){
+	var frame, previousFrame;
+
+	if (
+		_typeOf(name)      !== 'string' ||
+		_typeOf(keyframes) !== 'object'
+	) {
+		return this;
+	}
+
+	for (frame in keyframes) {
+		keyframes[frame] = Internal.convertFrame(keyframes[frame], previousFrame);
+		previousFrame = keyframes[frame];
+	}
+
+	Animator.Animations[name] = keyframes;
+
+	return this;
 };
 
 Animator.parseCSSFunctionString = function(string){
