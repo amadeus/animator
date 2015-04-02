@@ -346,12 +346,12 @@ Internal = {
 	},
 
 	getSpringStyle: function(items, spring, tick, separator){
-		var value = '', name, x, key, accel, vel, pos, target;
+		var value = '', name, x, key, accel, vel, current, target;
 
-		target = spring.target;
-		pos    = spring.pos;
-		vel    = spring.vel;
-		accel  = spring.accel;
+		target  = spring.target;
+		current = spring.current;
+		vel     = spring.vel;
+		accel   = spring.accel;
 
 		if (items.length) {
 			for (x = 0; x < items.length; x += 2) {
@@ -359,19 +359,19 @@ Internal = {
 				if (x > 0 && separator) {
 					value += separator;
 				}
-				if (typeof pos[items[x]] !== 'undefined') {
+				if (typeof current[items[x]] !== 'undefined') {
 					key = items[x];
 
-					accel[key] = spring.stiffness * (target[key] - pos[key]) - spring.friction * vel[key];
+					accel[key] = spring.stiffness * (target[key] - current[key]) - spring.friction * vel[key];
 					if (Math.abs(accel[key]) < spring.threshold) {
 						accel[key] = 0;
 						vel[key] = 0;
-						pos[key] = target[key];
+						current[key] = target[key];
 					} else {
-						vel[key] += accel[key] * tick;
-						pos[key] += vel[key] * tick;
+						vel[key]     += accel[key] * tick;
+						current[key] += vel[key] * tick;
 					}
-					value += pos[key];
+					value += current[key];
 				} else {
 					value +=  items[x];
 				}
@@ -670,14 +670,14 @@ Internal = {
 			settings.styles = Internal.convertObject(settings.styles);
 		}
 
-		settings.type = 'spring';
-		settings.pos   = {};
-		settings.vel   = {};
-		settings.accel = {};
+		settings.type    = 'spring';
+		settings.current = {};
+		settings.vel     = {};
+		settings.accel   = {};
 		for (name in settings.target) {
-			settings.pos[name]   = settings.target[name];
-			settings.vel[name]   = 0;
-			settings.accel[name] = 0;
+			settings.current[name] = settings.target[name];
+			settings.vel[name]     = 0;
+			settings.accel[name]   = 0;
 		}
 
 		settings.element = element;
