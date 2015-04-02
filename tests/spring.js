@@ -35,7 +35,7 @@ var setSpring = function(){
 };
 
 var disableSpring = function(){
-	animator.removeSpring(element);
+	animator.clearCurrent();
 };
 
 document.body.addEventListener('mousemove', function(event){

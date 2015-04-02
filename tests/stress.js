@@ -15,8 +15,6 @@ var randomInt = function(min, max){
 	return Math.floor(Math.random() * (max - min) + min);
 };
 
-var animator = new Animator();
-
 var elementPool = [];
 
 var getElementFromPool = function(duration){
@@ -57,8 +55,8 @@ var poolElement = function(el){
 	elementPool.push(el);
 };
 
-var removeNode = function(el, tween){
-	poolElement(el);
+var removeNode = function(tween){
+	poolElement(tween.element);
 	counter--;
 };
 
@@ -66,7 +64,7 @@ var createBlock = function(){
 	var duration = randomInt(1000, 3000);
 	var el = getElementFromPool(duration);
 
-	animator.tweenElement(el, duration, {
+	new Animator().tweenElement(el, duration, {
 		opacity: 0,
 		transform: {
 			translate3d: [0, (window.innerHeight + 20), 0]

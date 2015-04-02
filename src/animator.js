@@ -104,41 +104,15 @@ Internal = {
 	_index: 0,
 	_last: undefined,
 
-	elements  : {},
 	animating : [],
 	toRemove  : [],
 
-	addItem: function(type, element, tween){
-		var idKey = '_' + type + 'ID',
-			id    = element[idKey],
-			previousTweens;
-
-		// Element is currently animating
-		if (!id) {
-			id = element[idKey] = type + '-' + this._index++;
-		}
-
-		previousTweens = this.elements[id];
-		if (previousTweens) {
-			// this.elements[id] = previousTweens.concat.apply(this.elements[id], tweens);
-			// this.elements[id].element = element;
-			// Trying out apply to reduce garbage... even if it's a bit slower...
-			if (_typeOf(tween) === 'array') {
-				previousTweens.push.apply(previousTweens, tween);
-			} else {
-				previousTweens.push(tween);
-			}
+	addQueue: function(queue){
+		if (this.animating.indexOf(queue) >= 0) {
 			return;
 		}
 
-		if (_typeOf(tween) === 'array') {
-			this.elements[id] = tween;
-		} else {
-			this.elements[id] = [tween];
-		}
-		this.elements[id].element = element;
-		this.animating.push(id);
-
+		this.animating.push(queue);
 		this.start();
 	},
 
@@ -155,7 +129,7 @@ Internal = {
 	run: function(){
 		var animating = Internal.animating,
 			toRemove  = Internal.toRemove,
-			a, len, anims, now, done, index, id, tick;
+			a, len, anim, now, done, index, tick;
 
 		if (window.stats) {
 			window.stats.begin();
@@ -175,42 +149,47 @@ Internal = {
 		tick = now - Internal._last;
 
 		for (a = 0, len = animating.length; a < len; a++) {
-			anims = Internal.elements[animating[a]];
-			if (anims[0].paused) {
+			anim = animating[a][0];
+
+			if (!anim) {
+				toRemove.push(animating[a]);
 				continue;
 			}
 
-			if (anims[0].type === 'tween') {
-				done = Internal.updateTween(anims.element, anims[0], tick);
+			if (anim.paused) {
+				continue;
+			}
+
+			if (anim.type === 'tween') {
+				done = Internal.updateTween(anim, tick);
 				if (done) {
-					if (anims[0].to._onFrame) {
-						anims[0].to._onFrame(anims.element, anims[0]);
+					if (anim.to._onFrame) {
+						anim.to._onFrame(anim);
 					}
-					if (anims[0].to._finished) {
-						anims[0].to._finished(anims.element, anims[0]);
+					if (anim.to._finished) {
+						anim.to._finished(anim);
 					}
 					// Splice seems to eek out a few small milliseconds over shift
-					anims.splice(0, 1);
+					animating[a].splice(0, 1);
 				}
 
-				if (done && !anims.length) {
+				if (done && !animating[a].length) {
 					// toRemove[toRemove.length] = animating[a];
 					toRemove.push(animating[a]);
 				}
 				continue;
 			}
 
-			if (anims[0].type === 'spring') {
-				Internal.updateSpring(anims.element, anims[0], tick);
+			if (anim.type === 'spring') {
+				Internal.updateSpring(anim, tick);
 				continue;
 			}
 		}
+		anim = undefined;
 
 		if (toRemove.length) {
 			for (a = 0, len = toRemove.length; a < len; a++) {
-				id = toRemove[a];
-				Internal.elements[id] = undefined;
-				index = animating.indexOf(id);
+				index = animating.indexOf(toRemove[a]);
 				if (index >= 0) {
 					animating.splice(index, 1);
 				}
@@ -232,8 +211,10 @@ Internal = {
 		}
 	},
 
-	updateTween: function(element, tween, tick){
-		var delta, prop, timing, from, to, duration;
+	updateTween: function(tween, tick){
+		var delta, prop, timing, from, to, duration, element;
+
+		element = tween.element;
 
 		if (!tween.from) {
 			tween.from = Internal.getFromTween(element, tween.to);
@@ -343,11 +324,12 @@ Internal = {
 		return value;
 	},
 
-	updateSpring: function(element, spring, tick){
-		var name, styles;
+	updateSpring: function(spring, tick){
+		var name, styles, element;
 
+		element = spring.element;
 		styles  = spring.styles;
-		tick   = tick / 1000;
+		tick    = tick / 1000;
 
 		for (name in styles) {
 			element.style[name] = Internal.getSpringStyle(
@@ -446,9 +428,8 @@ Internal = {
 		return newObject;
 	},
 
-	keyframesToTweens: function(animation, duration, finished){
-		var tweens = [],
-			from, to, fromPercent, toPercent, percent, tween;
+	keyframesToTweens: function(queue, animation, duration, element, finished){
+		var from, to, fromPercent, toPercent, percent, tween;
 
 		for (percent in animation) {
 			if (!animation.hasOwnProperty(percent)) {
@@ -465,27 +446,26 @@ Internal = {
 
 			tween = {
 				type     : 'tween',
+				element  : element,
 				from     : from,
 				to       : to,
 				duration : ((duration * toPercent) - (duration * fromPercent)) >> 0
 			};
 
-			tweens.push(tween);
+			queue.push(tween);
 
 			from = to;
 			fromPercent = toPercent;
 		}
 
 		if (_typeOf(finished) === 'function') {
-			tweens[tweens.length - 1].to._finished = finished;
+			queue[queue.length - 1].to._finished = finished;
 		}
 
 		to   = undefined;
 		from = undefined;
 		fromPercent = undefined;
 		toPercent   = undefined;
-
-		return tweens;
 	},
 
 	getValueAndUnits: function(items, prop){
@@ -662,15 +642,24 @@ Internal = {
 		}
 	},
 
-	setupSpring: function(element, settings){
-		var name, previousSettings;
+	setupSpring: function(queue, element, settings){
+		var name, previousSettings, x;
+
+		for (x = 0; x < queue.length; x++) {
+			if (
+				queue[x].type === 'spring' &&
+				queue[x].element === element
+			) {
+				previousSettings = queue[x];
+				break;
+			}
+		}
 
 		// If there is a spring already set on the current element, update its
 		// values, I probably need to do more about templating though.
-		previousSettings = Internal.elements[element._springID];
 		if (previousSettings) {
-			previousSettings[0].stiffness = settings.stiffness;
-			previousSettings[0].friction = settings.friction;
+			previousSettings.stiffness = settings.stiffness;
+			previousSettings.friction  = settings.friction;
 			return;
 		}
 
@@ -688,7 +677,10 @@ Internal = {
 			settings.accel[name] = 0;
 		}
 
-		Internal.addItem('spring', element, settings);
+		settings.element = element;
+		queue.push(settings);
+
+		Internal.addQueue(queue);
 	}
 
 };
@@ -700,7 +692,12 @@ Animator = function(){
 Animator.prototype = {
 
 	isRunning: function(){
-		return Internal.isRunning;
+		var index = Internal.animating.indexOf(this._queue);
+		if (index >= 0) {
+			return true;
+		} else {
+			return false;
+		}
 	},
 
 	springElement: function(element, settings){
@@ -712,13 +709,14 @@ Animator.prototype = {
 			throw new TypeError('Animator.springElement spring settings must be an object: ' + settings);
 		}
 
-		Internal.setupSpring(element, settings);
+		Internal.setupSpring(this._queue, element, settings);
 
 		return this;
 	},
 
 	tweenElement: function(element, duration){
 		var from, to, tween, frames, callback;
+
 		if (_typeOf(element) === 'string') {
 			element = document.getElementById(element);
 		}
@@ -746,6 +744,7 @@ Animator.prototype = {
 
 		tween = {
 			type     : 'tween',
+			element  : element,
 			duration : duration,
 			from     : from,
 			to       : to
@@ -755,14 +754,14 @@ Animator.prototype = {
 			tween.to._finished = callback;
 		}
 
-		Internal.addItem('tween', element, tween);
+		this._queue.push(tween);
+
+		Internal.addQueue(this._queue);
 
 		return this;
 	},
 
 	animateElement: function(element, animation, duration, finished){
-		var tweens;
-
 		if (_typeOf(element) === 'string') {
 			element = document.getElementById(element);
 		}
@@ -777,95 +776,58 @@ Animator.prototype = {
 			throw new Error('Animator.animateElement: Animation does not exist: ' + animation);
 		}
 
-		tweens = Internal.keyframesToTweens(
+		Internal.keyframesToTweens(
+			this._queue,
 			Animator.Animations[animation],
 			duration,
+			element,
 			finished
 		);
 
-		Internal.addItem('tween', element, tweens);
+		Internal.addQueue(this._queue);
 
 		return this;
 	},
 
-	removeSpring: function(element){
-		if (_typeOf(element) === 'spring') {
-			element = document.getElementById(element);
-		}
-
-		if (!element || !element._springID) {
-			return this;
-		}
-
-		if (Internal.isRunning) {
-			Internal.toRemove.push(element._springID);
-		}
-
+	clearCurrent: function(){
+		this._queue.shift();
 		return this;
 	},
 
 	clearTweenQueue: function(element){
-		if (_typeOf(element) === 'string') {
-			element = document.getElementById(element);
-		}
-
-		if (!element || !element._tweenID) {
+		if (!this._queue.length) {
 			return this;
 		}
 
-		if (Internal.isRunning) {
-			Internal.toRemove.push(element._tweenID);
-		}
-
+		this._queue.length = 0;
 		return this;
 	},
 
-	pauseElement: function(element){
-		if (_typeOf(element) === 'string') {
-			element = document.getElementById(element);
-		}
-
-		if (!element || !element._tweenID) {
+	pause: function(){
+		if (!this._queue.length) {
 			return this;
 		}
 
-		if (Internal.elements[element._tweenID]) {
-			Internal.elements[element._tweenID][0].paused = true;
-		}
-
+		this._queue[0].paused = true;
 		return this;
 	},
 
-	resumeElement: function(element){
-		if (_typeOf(element) === 'string') {
-			element = document.getElementById(element);
-		}
-
-		if (!element && !element._tweenID) {
+	resume: function(){
+		if (!this._queue.length) {
 			return this;
 		}
 
-		if (Internal.elements[element._tweenID]) {
-			Internal.elements[element._tweenID][0].paused = false;
-		}
+		this._queue[0].paused = false;
 
 		return this;
 	},
 
 	getCurrentAnimation: function(element){
-		if (_typeOf(element) === 'string') {
-			element = document.getElementById(element);
-		}
-
-		if (!element || !element._tweenID) {
+		if (!this._queue.length) {
 			return null;
 		}
 
-		if (Internal.elements[element._tweenID]) {
-			return Internal.elements[element._tweenID][0];
-		}
-
-		return null;
+		return this._queue[0];
 	}
 
 };

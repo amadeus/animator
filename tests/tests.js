@@ -126,10 +126,10 @@ pauseResume.addEventListener('click', function(event){
 
 	element = document.getElementById('animate');
 	if (tween.paused) {
-		animator.resumeElement(element);
+		animator.resume();
 		document.body.className = '';
 	} else {
-		animator.pauseElement(element);
+		animator.pause();
 		document.body.className = 'paused';
 	}
 
