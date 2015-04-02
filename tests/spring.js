@@ -21,7 +21,7 @@ var setSpring = function(){
 	if (isNaN(stiff) || isNaN(fric)) {
 		return;
 	}
-	animator.springElement(element, {
+	animator.addSpring(element, {
 		stiffness : stiff,
 		friction : fric,
 		threshold : 0.03,

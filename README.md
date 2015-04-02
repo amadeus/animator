@@ -22,7 +22,7 @@ optionally provide a `from` state.  If no `from` state is provided, Animator
 will figure out the current state of the element.
 
 ```js
-animatorInstance.tweenElement('element-id', 300, {
+animatorInstance.addTween('element-id', 300, {
     opacity: 0,
     transform: {
         translate3d: [0, '50%', 0]
@@ -32,7 +32,7 @@ animatorInstance.tweenElement('element-id', 300, {
 });
 ```
 
-Any subsequent calls to `.tweenElement` on the same element will be
+Any subsequent calls to `.addTween` on the same element will be
 automatically queued.
 
 
@@ -84,7 +84,7 @@ Animator.addAnimation('pop', {
 
 // We tell animator to fire the 'pop' animation we just defined
 // with a duration of 1 second
-animator.animateElement('element-id', 'pop', 1000)
+animator.addAnimation('element-id', 'pop', 1000)
 ```
 
 
@@ -104,7 +104,7 @@ var target = {
     y: 0
 };
 
-animator.springElement('element-id', {
+animator.addSpring('element-id', {
     stiffness: 80,
     friction: 15,
     threshold: 0.03,

@@ -98,7 +98,7 @@ form.addEventListener('submit', function(event){
 	if (!dur) {
 		dur = duration.value = 380;
 	}
-	animator.animateElement(
+	animator.addAnimation(
 		'animate',
 		select.value,
 		dur
@@ -107,7 +107,7 @@ form.addEventListener('submit', function(event){
 
 clearQueue.addEventListener('click', function(event){
 	event.preventDefault();
-	animator.clearTweenQueue('animate');
+	animator.clearQueue('animate');
 	// Clear out all styles from the animation
 	var element = document.getElementById('animate');
 	element.setAttribute('style', '');
@@ -140,7 +140,7 @@ var element = document.getElementById('animate');
 element.style.opacity = 0;
 
 setTimeout(function() {
-	animator.tweenElement(element, 500, {
+	animator.addTween(element, 500, {
 		_timing: 'ease-in-out',
 		backgroundColor: {
 			rgb: [0, 0, 0]
@@ -154,7 +154,7 @@ setTimeout(function() {
 		console.log('Tween finished');
 	});
 
-	animator.tweenElement(element, 700, {
+	animator.addTween(element, 700, {
 		_timing: 'ease-in-out',
 		backgroundColor: {
 			rgba: [0, 0, 255, 0.5]
@@ -165,7 +165,7 @@ setTimeout(function() {
 		}
 	});
 
-	animator.tweenElement(element, 500, {
+	animator.addTween(element, 500, {
 		_timing: 'ease-in-out',
 		opacity: 0.5,
 		backgroundColor: {
@@ -178,12 +178,12 @@ setTimeout(function() {
 		}
 	});
 
-	animator.tweenElement(element, 500, {
+	animator.addTween(element, 500, {
 		_timing: 'ease-in-out',
 		borderRadius: 100
 	});
 
-	animator.tweenElement(element, 500, {
+	animator.addTween(element, 500, {
 		_timing: 'ease-in-out',
 		borderRadius: [0],
 		opacity: 1,

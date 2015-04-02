@@ -108,7 +108,10 @@ Internal = {
 	toRemove  : [],
 
 	addQueue: function(queue){
-		if (this.animating.indexOf(queue) >= 0) {
+		if (
+			this.animating.indexOf(queue) >= 0 ||
+			!queue.length
+		) {
 			return;
 		}
 
@@ -679,8 +682,6 @@ Internal = {
 
 		settings.element = element;
 		queue.push(settings);
-
-		Internal.addQueue(queue);
 	}
 
 };
@@ -700,13 +701,31 @@ Animator.prototype = {
 		}
 	},
 
-	springElement: function(element, settings){
+	addSpring: function(){
+		this.queueSpring.apply(this, arguments);
+		this.start();
+		return this;
+	},
+
+	addTween: function(){
+		this.queueTween.apply(this, arguments);
+		this.start();
+		return this;
+	},
+
+	addAnimation: function(){
+		this.queueAnimation.apply(this, arguments);
+		this.start();
+		return this;
+	},
+
+	queueSpring: function(element, settings){
 		if (_typeOf(element) === 'string') {
 			element = document.getElementById(element);
 		}
 
 		if (_typeOf(settings) !== 'object') {
-			throw new TypeError('Animator.springElement spring settings must be an object: ' + settings);
+			throw new TypeError('Animator.queueSpring spring settings must be an object: ' + settings);
 		}
 
 		Internal.setupSpring(this._queue, element, settings);
@@ -714,7 +733,7 @@ Animator.prototype = {
 		return this;
 	},
 
-	tweenElement: function(element, duration){
+	queueTween: function(element, duration){
 		var from, to, tween, frames, callback;
 
 		if (_typeOf(element) === 'string') {
@@ -722,11 +741,11 @@ Animator.prototype = {
 		}
 		if (_typeOf(element) !== 'element') {
 			throw new Error(
-				'Animator.tweenElement: Must provide a valid element to tween: ' + element
+				'Animator.queueTween: Must provide a valid element to tween: ' + element
 			);
 		}
 		if (_typeOf(duration) !== 'number') {
-			throw new TypeError('Animator.tweenElement: Must provide a valid duration: ' + duration);
+			throw new TypeError('Animator.addTween: Must provide a valid duration: ' + duration);
 		}
 
 		frames = Array.prototype.slice.call(arguments, 2);
@@ -756,12 +775,10 @@ Animator.prototype = {
 
 		this._queue.push(tween);
 
-		Internal.addQueue(this._queue);
-
 		return this;
 	},
 
-	animateElement: function(element, animation, duration, finished){
+	queueAnimation: function(element, animation, duration, finished){
 		if (_typeOf(element) === 'string') {
 			element = document.getElementById(element);
 		}
@@ -773,7 +790,7 @@ Animator.prototype = {
 		duration = duration || 1000;
 
 		if (!Animator.Animations[animation]) {
-			throw new Error('Animator.animateElement: Animation does not exist: ' + animation);
+			throw new Error('Animator.queueAnimation: Animation does not exist: ' + animation);
 		}
 
 		Internal.keyframesToTweens(
@@ -784,22 +801,16 @@ Animator.prototype = {
 			finished
 		);
 
+		return this;
+	},
+
+	start: function(){
 		Internal.addQueue(this._queue);
-
 		return this;
 	},
 
-	clearCurrent: function(){
-		this._queue.shift();
-		return this;
-	},
-
-	clearTweenQueue: function(element){
-		if (!this._queue.length) {
-			return this;
-		}
-
-		this._queue.length = 0;
+	stop: function(){
+		Internal.toRemove.push(this._queue);
 		return this;
 	},
 
@@ -819,6 +830,20 @@ Animator.prototype = {
 
 		this._queue[0].paused = false;
 
+		return this;
+	},
+
+	clearCurrent: function(){
+		this._queue.shift();
+		return this;
+	},
+
+	clearQueue: function(element){
+		if (!this._queue.length) {
+			return this;
+		}
+
+		this._queue.length = 0;
 		return this;
 	},
 
