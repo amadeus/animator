@@ -859,7 +859,7 @@ Animator.prototype = {
 
 Animator.Animations = {};
 
-Animator.addAnimation = function(name, keyframes){
+Animator.createAnimation = function(name, keyframes){
 	var frame, previousFrame;
 
 	if (

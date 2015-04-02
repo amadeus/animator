@@ -77,7 +77,7 @@ var animator       = new Animator(),
 
 // Create all animations defined in the Animations object above
 for (var name in Animations) {
-	Animator.addAnimation(name, Animations[name]);
+	Animator.createAnimation(name, Animations[name]);
 	option = document.createElement('option');
 	option.innerHTML = name;
 	option.value = name;

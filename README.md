@@ -46,7 +46,7 @@ for an element with a duration of your choice.
 // Creates the animation - each key must be digit like,
 // and it represents a percentage of the animation.
 // We named the animation 'pop', so it can be referenced later
-Animator.addAnimation('pop', {
+Animator.createAnimation('pop', {
     '0': {
         backgroundColor: {
             rgba: [255,0,0,1]
