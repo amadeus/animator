@@ -183,6 +183,16 @@ Internal = {
 				continue;
 			}
 		}
+
+		// Setup tween from state if necessary
+		// It's best to do this in preparation for the next frame,
+		// after all visual animating has been done
+		for (a = 0; a < len; a++) {
+			anim = animating[a][0];
+			if (anim && anim.type === 'tween' && !anim.from) {
+				anim.from = Internal.getFromTween(anim.element, anim.to);
+			}
+		}
 		anim = undefined;
 
 		if (toRemove.length) {
@@ -202,27 +212,23 @@ Internal = {
 			toRemove.length = 0;
 		}
 
-		if (Internal.isRunning) {
-			Internal._last = now;
-			_requestAnimationFrame(Internal.run);
-		} else {
+		if (window.stats) {
+			window.stats.end();
+		}
+
+		if (!Internal.isRunning) {
 			Internal._last = undefined;
 			return;
 		}
 
-		if (window.stats) {
-			window.stats.end();
-		}
+		Internal._last = now;
+		_requestAnimationFrame(Internal.run);
 	},
 
 	updateTween: function(tween, tick){
 		var delta, prop, timing, from, to, duration, element;
 
 		element = tween.element;
-
-		if (!tween.from) {
-			tween.from = Internal.getFromTween(element, tween.to);
-		}
 
 		if (tween.delta === undefined) {
 			tween.delta = 0;
@@ -588,8 +594,7 @@ Internal = {
 
 	getFromTween: function(element, to){
 		var from = {},
-			cStyle = _getComputedStyle(element),
-			key, value;
+			cStyle, key, value;
 
 		for (key in to) {
 			if (REGEX.startsWith.test(key)) {
@@ -597,7 +602,15 @@ Internal = {
 				continue;
 			}
 
-			value = element.style[key] || cStyle[key] || 0;
+			value = element.style[key];
+			if (!value) {
+				// We should ONLY grab computed style if necessary.
+				if (!cStyle) {
+					 cStyle = _getComputedStyle(element);
+				}
+				value = cStyle[key] || 0;
+			}
+
 			if (REGEX.isTransform.test(key) && value === 'none') {
 				value = {};
 			} else if (REGEX.containsCSSFunc.test(value)) {
@@ -806,6 +819,21 @@ Animator.prototype = {
 	},
 
 	start: function(){
+		if (this.isRunning() || !this._queue.length) {
+			return this;
+		}
+
+		if (
+			this._queue.length &&
+			this._queue[0].type === 'tween' &&
+			!this._queue[0].from
+		) {
+			this._queue[0].from = Internal.getFromTween(
+				this._queue[0].element,
+				this._queue[0].to
+			);
+		}
+
 		Internal.addQueue(this._queue);
 		return this;
 	},
