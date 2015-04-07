@@ -137,11 +137,6 @@ Internal = {
 		if (window.stats) {
 			window.stats.begin();
 		}
-		if (Internal.isRunning) {
-			_requestAnimationFrame(Internal.run);
-		} else {
-			return;
-		}
 
 		now = _performance.now();
 
@@ -200,7 +195,6 @@ Internal = {
 
 			// No need to run anymore
 			if (!animating.length) {
-				Internal._last = undefined;
 				Internal.isRunning = false;
 			}
 
@@ -208,7 +202,14 @@ Internal = {
 			toRemove.length = 0;
 		}
 
-		Internal._last = now;
+		if (Internal.isRunning) {
+			Internal._last = now;
+			_requestAnimationFrame(Internal.run);
+		} else {
+			Internal._last = undefined;
+			return;
+		}
+
 		if (window.stats) {
 			window.stats.end();
 		}
