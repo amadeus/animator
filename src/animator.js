@@ -179,7 +179,13 @@ Internal = {
 			}
 
 			if (anim.type === 'spring') {
-				Internal.updateSpring(anim, tick);
+				done = Internal.updateSpring(anim, tick);
+				if (done && anim.autoRemove) {
+					animating[a].splice(0, 1);
+					if (!animating[a].length) {
+						toRemove.push(animating[a]);
+					}
+				}
 				continue;
 			}
 		}
@@ -335,11 +341,11 @@ Internal = {
 	},
 
 	updateSpring: function(spring, tick){
-		var name, styles, element;
+		var name, styles, element, isFinished;
 
-		element = spring.element;
-		styles  = spring.styles;
-		tick    = tick / 1000;
+		element    = spring.element;
+		styles     = spring.styles;
+		tick       = tick / 1000;
 
 		for (name in styles) {
 			element.style[name] = Internal.getSpringStyle(
@@ -349,16 +355,24 @@ Internal = {
 			);
 		}
 
-		return false;
+		isFinished = true;
+		for (name in spring.target) {
+			if (spring.finished[name] !== true) {
+				isFinished = false;
+			}
+		}
+
+		return isFinished;
 	},
 
 	getSpringStyle: function(items, spring, tick, separator){
-		var value = '', name, x, key, accel, vel, current, target;
+		var value = '', name, x, key, accel, vel, current, target, finished;
 
-		target  = spring.target;
-		current = spring.current;
-		vel     = spring.vel;
-		accel   = spring.accel;
+		target   = spring.target;
+		current  = spring.current;
+		vel      = spring.vel;
+		accel    = spring.accel;
+		finished = spring.finished;
 
 		if (items.length) {
 			for (x = 0; x < items.length; x += 2) {
@@ -374,9 +388,13 @@ Internal = {
 						accel[key] = 0;
 						vel[key] = 0;
 						current[key] = target[key];
-					} else {
+						if (finished[key] === false) {
+							finished[key] = true;
+						}
+					} else if (current[key] !== target[key]){
 						vel[key]     += accel[key] * tick;
 						current[key] += vel[key] * tick;
+						finished[key] = false;
 					}
 					value += current[key];
 				} else {
@@ -675,8 +693,9 @@ Internal = {
 		// If there is a spring already set on the current element, update its
 		// values, I probably need to do more about templating though.
 		if (previousSettings) {
-			previousSettings.stiffness = settings.stiffness;
-			previousSettings.friction  = settings.friction;
+			previousSettings.stiffness  = settings.stiffness;
+			previousSettings.friction   = settings.friction;
+			previousSettings.autoRemove = settings.autoRemove;
 			return;
 		}
 
@@ -684,10 +703,11 @@ Internal = {
 			settings.styles = Internal.convertObject(settings.styles);
 		}
 
-		settings.type    = 'spring';
-		settings.current = {};
-		settings.vel     = {};
-		settings.accel   = {};
+		settings.type     = 'spring';
+		settings.finished = {};
+		settings.current  = {};
+		settings.vel      = {};
+		settings.accel    = {};
 		for (name in settings.target) {
 			settings.current[name] = settings.target[name];
 			settings.vel[name]     = 0;

@@ -9,8 +9,9 @@ var coords = {
 	y: window.innerHeight / 2
 };
 
-var stiffness = document.getElementById('stiffness');
-var friction  = document.getElementById('friction');
+var stiffness  = document.getElementById('stiffness');
+var friction   = document.getElementById('friction');
+var autoremove = document.getElementById('autoremove');
 
 var buttonEnable  = document.getElementById('enable-spring');
 var buttonDisable = document.getElementById('disable-spring');
@@ -24,8 +25,9 @@ var setSpring = function(){
 	animator.addSpring(element, {
 		stiffness : stiff,
 		friction : fric,
-		threshold : 0.03,
+		threshold : 0.1,
 		target: coords,
+		autoRemove: autoremove.checked,
 		styles: {
 			transform: {
 				translate3d: ['{x}px', '{y}px', '0px']
