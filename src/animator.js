@@ -499,6 +499,10 @@ Internal = {
 	getValueAndUnits: function(items, prop){
 		var value, unit, x, match;
 
+		if (REGEX.startsWith.test(prop)) {
+			return items;
+		}
+
 		if (
 			_typeOf(items) !== 'number' &&
 			_typeOf(items) !== 'string' &&
@@ -802,6 +806,8 @@ Animator.prototype = {
 			from     : from,
 			to       : to
 		};
+
+		tween.delay = (from && from._delay) ? from._delay : to._delay || 0;
 
 		if (callback) {
 			tween.to._finished = callback;

@@ -180,6 +180,7 @@ setTimeout(function() {
 
 	animator.addTween(element, 500, {
 		_timing: 'ease-in-out',
+		_delay: 300,
 		borderRadius: 100
 	});
 
