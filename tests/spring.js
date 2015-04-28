@@ -11,7 +11,7 @@ var coords = {
 
 var stiffness  = document.getElementById('stiffness');
 var friction   = document.getElementById('friction');
-var autoremove = document.getElementById('autoremove');
+var permanent = document.getElementById('permanent');
 
 var buttonEnable  = document.getElementById('enable-spring');
 var buttonDisable = document.getElementById('disable-spring');
@@ -27,7 +27,7 @@ var setSpring = function(){
 		friction : fric,
 		threshold : 0.1,
 		target: coords,
-		autoRemove: autoremove.checked,
+		permanent: permanent.checked,
 		styles: {
 			transform: {
 				translate3d: ['{x}px', '{y}px', '0px']

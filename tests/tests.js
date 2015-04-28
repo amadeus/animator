@@ -154,6 +154,10 @@ setTimeout(function() {
 		console.log('Tween finished');
 	});
 
+	animator.addDelay(300, function(){
+		console.log('And we just experienced a 300ms second delay');
+	});
+
 	animator.addTween(element, 700, {
 		_timing: 'ease-in-out',
 		backgroundColor: {

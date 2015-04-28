@@ -160,33 +160,37 @@ Internal = {
 
 			if (anim.type === 'tween') {
 				done = Internal.updateTween(anim, tick);
-				if (done) {
+			}
+
+			if (anim.type === 'spring') {
+				done = Internal.updateSpring(anim, tick);
+			}
+
+			if (anim.type === 'delay') {
+				done = Internal.updateDelay(anim, tick);
+			}
+
+			if (done && !anim.permanent) {
+				if (anim.to) {
 					if (anim.to._onFrame) {
 						anim.to._onFrame(anim);
 					}
 					if (anim.to._finished) {
 						anim.to._finished(anim);
 					}
-					// Splice seems to eek out a few small milliseconds over shift
-					animating[a].splice(0, 1);
+				}
+				if (anim._onFrame) {
+					anim._onFrame(anim);
+				}
+				if (anim._finished) {
+					anim._finished(anim);
 				}
 
-				if (done && !animating[a].length) {
-					// toRemove[toRemove.length] = animating[a];
+				animating[a].splice(0, 1);
+
+				if (!animating[a].length) {
 					toRemove.push(animating[a]);
 				}
-				continue;
-			}
-
-			if (anim.type === 'spring') {
-				done = Internal.updateSpring(anim, tick);
-				if (done && anim.autoRemove) {
-					animating[a].splice(0, 1);
-					if (!animating[a].length) {
-						toRemove.push(animating[a]);
-					}
-				}
-				continue;
 			}
 		}
 
@@ -231,6 +235,20 @@ Internal = {
 		_requestAnimationFrame(Internal.run);
 	},
 
+	updateDelay: function(delay, tick){
+		if (delay.delta === undefined) {
+			delay.delta = 0;
+		} else {
+			delay.delta += tick;
+		}
+
+		if (delay.duration > delay.delta) {
+			return false;
+		} else {
+			return true;
+		}
+	},
+
 	updateTween: function(tween, tick){
 		var delta, prop, timing, from, to, duration, element;
 
@@ -242,16 +260,9 @@ Internal = {
 			tween.delta += tick;
 		}
 
-		if (tween.delay && tween.delay > tween.delta) {
-			return false;
-		} else if (tween.delay) {
-			delta = tween.delta - tween.delay;
-		} else {
-			delta = tween.delta;
-		}
-
-		from = tween.from;
-		to = tween.to;
+		delta    = tween.delta;
+		from     = tween.from;
+		to       = tween.to;
 		duration = tween.duration;
 
 		timing = tween.from._timing || Animator.TWEENS.LINEAR;
@@ -699,7 +710,7 @@ Internal = {
 		if (previousSettings) {
 			previousSettings.stiffness  = settings.stiffness;
 			previousSettings.friction   = settings.friction;
-			previousSettings.autoRemove = settings.autoRemove;
+			previousSettings.permanent  = settings.permanent;
 			return;
 		}
 
@@ -757,6 +768,22 @@ Animator.prototype = {
 		return this;
 	},
 
+	addDelay: function(duration, callback){
+		this.queueDelay.apply(this, arguments);
+		this.start();
+		return this;
+	},
+
+	queueDelay: function(duration, callback){
+		var delay = {
+			type      : 'delay',
+			duration  : parseInt(duration, 10) || 0,
+			_finished : callback
+		};
+		this._queue.push(delay);
+		return this;
+	},
+
 	queueSpring: function(element, settings){
 		if (_typeOf(element) === 'string') {
 			element = document.getElementById(element);
@@ -806,8 +833,6 @@ Animator.prototype = {
 			from     : from,
 			to       : to
 		};
-
-		tween.delay = (from && from._delay) ? from._delay : to._delay || 0;
 
 		if (callback) {
 			tween.to._finished = callback;
