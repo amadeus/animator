@@ -132,11 +132,10 @@ var queue = Animator.tweenElement('element-id', 300, {
     console.log('This method will be fired at the end of the tween');
 });
 
-// This will force the animation to wait 300ms before triggering
-// the next animation in the queue
+// This will force the animation to wait 300ms after the animation above
 queue.addDelay(300);
 
-// This animation will take place after the one before it
+// This tween will take place after the 300ms delay above
 queue.addTween('element-id', 300, {
     opacity: 1,
     transform: {
