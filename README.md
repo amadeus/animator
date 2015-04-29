@@ -74,43 +74,6 @@ Animator.animateElement('element-id', 'pop', 1000)
 ```
 
 
-### Spring Animation Example
-
-Springs as animations don't actually have a clearly defined start and end.  You
-must provide the spring with a referenced object that will be used as target
-for the CSS properties to 'spring towards'.  It may help to take a look at
-`tests/spring.js` to see an example implementation that goes beyond the scope
-of this example.  By default, springs will 'end' once they have started moving
-and have reached their target location within the accelleration threshold
-provided.  If you add a `permanent: true` to the settings, then the spring will
-never stop until you explicitly clear it.
-
-```js
-var target = {
-    x: 0,
-    y: 0
-};
-
-Animator.springElement('element-id', {
-    stiffness: 80,
-    friction: 15,
-    threshold: 0.03,
-    permanent: true,
-    target: target,
-    styles: {
-        transform: {
-            translate3d: ['{x}px', '{y}px', '0px']
-        }
-    }
-});
-```
-
-When you create the spring for the first time, the styles get set to the
-current `target` values.  When `coords.x` or `coords.y` change, the element
-transform styles will 'spring towards' the target values.  You can customize
-`.stiffness` and `.friction` for different spring effects.
-
-
 ### Animation Queues
 
 Whenever you call `Animator.tweenElement`, `Animator.animateElement`, or
@@ -169,6 +132,47 @@ queue.start();
 ```
 
 You can queue/chain tweens, animations, and springs.
+
+
+### Spring Animation Example
+
+Springs as animations don't actually have a clearly defined start and end.  You
+must provide the spring with a referenced object that will be used as target
+for the CSS properties to 'spring towards'.  It may help to take a look at
+`tests/spring.js` to see an example implementation that goes beyond the scope
+of this example.  By default, springs will 'end' once they have started moving
+and have reached their target location within the accelleration threshold
+provided.  If you add a `permanent: true` to the settings, then the spring will
+never stop until you explicitly clear it.
+
+```js
+var target = {
+    x: 0,
+    y: 0
+};
+
+var queue = Animator.springElement('element-id', {
+    stiffness: 80,
+    friction: 15,
+    threshold: 0.03,
+    permanent: true,
+    target: target,
+    styles: {
+        transform: {
+            translate3d: ['{x}px', '{y}px', '0px']
+        }
+    }
+});
+
+// Since used permanent: true on our spring settings, the spring will never
+// end. To stop the spring at a later time, do the following:
+queue.clearCurrent();
+```
+
+When you create the spring for the first time, the styles get set to the
+current `target` values.  When `coords.x` or `coords.y` change, the element
+transform styles will 'spring towards' the target values.  You can customize
+`.stiffness` and `.friction` for different spring effects.
 
 
 ## Demo/Tests
