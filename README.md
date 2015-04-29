@@ -4,16 +4,6 @@ A tiny, standalone, universal high performance animation library for CSS.  The A
 mostly JSON and mimics the CSS Animation API.  Currently Animator supports
 tweens, keyframed animations and springs.
 
-## Example Usage
-
-First you need to create an instance of `Animator`.  This instance is used to
-trigger and store all tweens, animations, springs, etc.
-
-
-```js
-var animatorInstance = new Animator();
-```
-
 ### Basic Tween
 
 A basic tween is quite simple.  You just need to provide an element, a duration
@@ -22,7 +12,7 @@ optionally provide a `from` state.  If no `from` state is provided, Animator
 will figure out the current state of the element.
 
 ```js
-animatorInstance.addTween('element-id', 300, {
+Animator.tweenElement('element-id', 300, {
     opacity: 0,
     transform: {
         translate3d: [0, '50%', 0]
@@ -31,10 +21,6 @@ animatorInstance.addTween('element-id', 300, {
     console.log('This method will be fired at the end of the tween');
 });
 ```
-
-Any subsequent calls to `.addTween` on the same element will be
-automatically queued.
-
 
 ### Keyframe Animation Example
 
@@ -84,7 +70,7 @@ Animator.createAnimation('pop', {
 
 // We tell animator to fire the 'pop' animation we just defined
 // with a duration of 1 second
-animator.addAnimation('element-id', 'pop', 1000)
+Animator.animateElement('element-id', 'pop', 1000)
 ```
 
 
@@ -104,10 +90,11 @@ var target = {
     y: 0
 };
 
-animator.addSpring('element-id', {
+Animator.springElement('element-id', {
     stiffness: 80,
     friction: 15,
     threshold: 0.03,
+    permanent: true,
     target: target,
     styles: {
         transform: {
@@ -121,6 +108,71 @@ When you create the spring for the first time, the styles get set to the
 current `target` values.  When `coords.x` or `coords.y` change, the element
 transform styles will 'spring towards' the target values.  You can customize
 `.stiffness` and `.friction` for different spring effects.
+
+If you do not set `permanent: true` on the spring settings, then the spring
+will auto remove itself once it has started moving and all properties have
+reached their destinations.
+
+
+### Animation Queues
+
+Whenever you call `Animator.tweenElement`, `Animator.animateElement`, or
+`Animator.springElement`, the return object is a queue instance that can be
+added to.  This queue can be used to add further animations that are chained
+together.
+
+```js
+// This animation will start taking place immediately
+var queue = Animator.tweenElement('element-id', 300, {
+    opacity: 0,
+    transform: {
+        translate3d: [0, '50%', 0]
+    }
+}, function(){
+    console.log('This method will be fired at the end of the tween');
+});
+
+// This will force the animation to wait 300ms before triggering
+// the next animation in the queue
+queue.addDelay(300);
+
+// This animation will take place after the one before it
+queue.addTween('element-id', 300, {
+    opacity: 1,
+    transform: {
+        translate3d: [0, '0%', 0]
+    }
+})
+```
+
+You can also create animation queue's manually, and queue up everthing and
+choose when to kick things off.
+
+You can also add delays to a queue, to allow pausing between animations.
+Simply provide the duration and an optional callback to fire at the end of the
+duration if you'd like.
+
+```js
+var queue = new Animator.Queue();
+
+queue.addTween('element-id', 300, {
+    height: 20
+});
+
+queue.addTween('element-id', 300, {
+    opacity: 0
+});
+
+queue.addTween('element-id', 300, {
+    opacity: 1,
+    height: 300
+});
+
+// Starts the animation queue, can be called whenever
+queue.start();
+```
+
+You can queue/chain tweens, animations, and springs.
 
 
 ## Demo/Tests
