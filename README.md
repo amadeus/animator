@@ -80,9 +80,10 @@ Springs as animations don't actually have a clearly defined start and end.  You
 must provide the spring with a referenced object that will be used as target
 for the CSS properties to 'spring towards'.  It may help to take a look at
 `tests/spring.js` to see an example implementation that goes beyond the scope
-of this example.  Spring animations never really have a completion state, you
-just provide a minimum threshold for accelleration that will force the element
-to pin to the target coordinate.
+of this example.  By default, springs will 'end' once they have started moving
+and have reached their target location within the accelleration threshold
+provided.  If you add a `permanent: true` to the settings, then the spring will
+never stop until you explicitly clear it.
 
 ```js
 var target = {
@@ -108,10 +109,6 @@ When you create the spring for the first time, the styles get set to the
 current `target` values.  When `coords.x` or `coords.y` change, the element
 transform styles will 'spring towards' the target values.  You can customize
 `.stiffness` and `.friction` for different spring effects.
-
-If you do not set `permanent: true` on the spring settings, then the spring
-will auto remove itself once it has started moving and all properties have
-reached their destinations.
 
 
 ### Animation Queues
