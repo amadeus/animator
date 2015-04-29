@@ -66,7 +66,7 @@ var Animations = {
 	}
 };
 
-var queue          = new Animator.Queue(),
+var queue          = window.durp = new Animator.Queue(),
 	form           = document.getElementById('form'),
 	select         = document.getElementById('animations'),
 	duration       = document.getElementById('duration'),
@@ -126,7 +126,7 @@ pauseResume.addEventListener('click', function(event){
 	}
 
 	element = document.getElementById('animate');
-	if (tween.paused) {
+	if (queue.paused) {
 		queue.resume();
 		document.body.className = '';
 	} else {

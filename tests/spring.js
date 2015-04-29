@@ -54,6 +54,8 @@ friction.addEventListener( 'keyup', setSpring, false);
 stiffness.addEventListener('blur', setSpring, false);
 friction.addEventListener( 'blur', setSpring, false);
 
+permanent.addEventListener('change', setSpring, false);
+
 buttonDisable.addEventListener('click', disableSpring, false);
 buttonEnable.addEventListener('click', setSpring, false);
 

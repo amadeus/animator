@@ -184,7 +184,6 @@ Internal = {
 	_last: undefined,
 
 	animating : [],
-	toRemove  : [],
 
 	addQueue: function(queue){
 		if (
@@ -210,8 +209,7 @@ Internal = {
 
 	run: function(){
 		var animating = Internal.animating,
-			toRemove  = Internal.toRemove,
-			a, len, anim, now, done, index, tick;
+			a, b, anim, anims, now, done, tick;
 
 		if (window.stats) {
 			window.stats.begin();
@@ -225,71 +223,61 @@ Internal = {
 
 		tick = now - Internal._last;
 
-		for (a = 0, len = animating.length; a < len; a++) {
-			anim = animating[a][0];
+		for (a = 0; a < animating.length;) {
+			anims = animating[a][0];
 
-			if (!anim) {
-				toRemove.push(animating[a]);
+			if (!anims) {
+				animating.splice(a, 1);
 				continue;
 			}
 
-			if (anim.paused) {
-				continue;
+			for (b = 0; b < anims.length;) {
+				anim = anims[b];
+
+				if (anim.paused) {
+					b += 1;
+					continue;
+				}
+
+				done = anim.update(tick);
+
+				if (done && !anim.permanent) {
+					if (anim.to) {
+						if (anim.to._onFrame) {
+							anim.to._onFrame(anim);
+						}
+						if (anim.to._finished) {
+							anim.to._finished(anim);
+						}
+					}
+					if (anim._onFrame) {
+						anim._onFrame(anim);
+					}
+					if (anim._finished) {
+						anim._finished(anim);
+					}
+
+					anims.splice(b, 1);
+
+					continue;
+				}
+				b += 1;
 			}
 
-			done = anim.update(tick);
-
-			if (done && !anim.permanent) {
-				if (anim.to) {
-					if (anim.to._onFrame) {
-						anim.to._onFrame(anim);
-					}
-					if (anim.to._finished) {
-						anim.to._finished(anim);
-					}
-				}
-				if (anim._onFrame) {
-					anim._onFrame(anim);
-				}
-				if (anim._finished) {
-					anim._finished(anim);
-				}
-
+			if (!anims.length) {
 				animating[a].splice(0, 1);
-
 				if (!animating[a].length) {
-					toRemove.push(animating[a]);
+					animating.splice(a, 1);
+					continue;
+				} else {
+					Internal.generateFromTweens(animating[a][0]);
 				}
 			}
+			a += 1;
 		}
 
-		// Setup tween from state if necessary
-		// It's best to do this in preparation for the next frame,
-		// after all visual animating has been done
-		for (a = 0; a < len; a++) {
-			anim = animating[a][0];
-			if (anim && anim.type === 'tween' && !anim.from) {
-				anim.from = Internal.getFromTween(anim.element, anim.to);
-			}
-		}
-		anim = undefined;
-
-		if (toRemove.length) {
-			for (a = 0, len = toRemove.length; a < len; a++) {
-				index = animating.indexOf(toRemove[a]);
-				if (index >= 0) {
-					animating.splice(index, 1);
-				}
-			}
-
-			// No need to run anymore
-			if (!animating.length) {
-				Internal.isRunning = false;
-			}
-
-			// Clean out the array
-			toRemove.length = 0;
-		}
+		anim  = undefined;
+		anims = undefined;
 
 		if (window.stats) {
 			window.stats.end();
@@ -302,6 +290,21 @@ Internal = {
 
 		Internal._last = now;
 		_requestAnimationFrame(Internal.run);
+	},
+
+	generateFromTweens: function(group){
+		var x, anim;
+
+		if (!group) {
+			return;
+		}
+
+		for (x = 0; x < group.length; x++) {
+			anim = group[x];
+			if (anim && anim.type === 'tween' && !anim.from) {
+				anim.from = Internal.getFromTween(anim.element, anim.to);
+			}
+		}
 	},
 
 	getTweenStyle: function(from, to, timing, delta, duration, separator){
@@ -483,7 +486,7 @@ Internal = {
 				duration : ((duration * toPercent) - (duration * fromPercent)) >> 0
 			};
 
-			queue.push(tween);
+			queue.push([tween]);
 
 			from = to;
 			fromPercent = toPercent;
@@ -685,15 +688,17 @@ Internal = {
 	},
 
 	setupSpring: function(queue, element, settings){
-		var name, previousSettings, x;
+		var name, previousSettings, x, y;
 
 		for (x = 0; x < queue.length; x++) {
-			if (
-				queue[x].type === 'spring' &&
-				queue[x].element === element
-			) {
-				previousSettings = queue[x];
-				break;
+			for (y = 0; y < queue[x].length; y++) {
+				if (
+					queue[x][y].type === 'spring' &&
+					queue[x][y].element === element
+				) {
+					previousSettings = queue[x][y];
+					break;
+				}
 			}
 		}
 
@@ -723,7 +728,7 @@ Internal = {
 		}
 
 		settings.element = element;
-		queue.push(settings);
+		queue.push([settings]);
 	}
 
 };
@@ -961,7 +966,7 @@ Animator.Queue.prototype = {
 			duration  : parseInt(duration, 10) || 0,
 			_finished : callback
 		};
-		this._queue.push(delay);
+		this._queue.push([delay]);
 		return this;
 	},
 
@@ -1020,7 +1025,7 @@ Animator.Queue.prototype = {
 			tween.to._finished = callback;
 		}
 
-		this._queue.push(tween);
+		this._queue.push([tween]);
 
 		return this;
 	},
@@ -1056,15 +1061,8 @@ Animator.Queue.prototype = {
 			return this;
 		}
 
-		if (
-			this._queue.length &&
-			this._queue[0].type === 'tween' &&
-			!this._queue[0].from
-		) {
-			this._queue[0].from = Internal.getFromTween(
-				this._queue[0].element,
-				this._queue[0].to
-			);
+		if (this._queue.length) {
+			Internal.generateFromTweens(this._queue[0]);
 		}
 
 		Internal.addQueue(this._queue);
@@ -1072,25 +1070,34 @@ Animator.Queue.prototype = {
 	},
 
 	stop: function(){
-		Internal.toRemove.push(this._queue);
+		this.clearQueue();
 		return this;
 	},
 
 	pause: function(){
+		var x;
 		if (!this._queue.length) {
 			return this;
 		}
 
-		this._queue[0].paused = true;
+		for (x = 0; x < this._queue[0].length; x++) {
+			this._queue[0][x].paused = true;
+		}
+		this.paused = true;
+
 		return this;
 	},
 
 	resume: function(){
+		var x;
 		if (!this._queue.length) {
 			return this;
 		}
 
-		this._queue[0].paused = false;
+		for (x = 0; x < this._queue[0].length; x++) {
+			this._queue[0][x].paused = false;
+		}
+		this.paused = false;
 
 		return this;
 	},
@@ -1101,15 +1108,11 @@ Animator.Queue.prototype = {
 	},
 
 	clearQueue: function(element){
-		if (!this._queue.length) {
-			return this;
-		}
-
 		this._queue.length = 0;
 		return this;
 	},
 
-	getCurrentAnimation: function(element){
+	getCurrentAnimation: function(){
 		if (!this._queue.length) {
 			return null;
 		}
