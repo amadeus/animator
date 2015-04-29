@@ -64,7 +64,7 @@ var createBlock = function(){
 	var duration = randomInt(1000, 3000);
 	var el = getElementFromPool(duration);
 
-	new Animator().addTween(el, duration, {
+	Animator.tweenElement(el, duration, {
 		opacity: 0,
 		transform: {
 			translate3d: [0, (window.innerHeight + 20), 0]

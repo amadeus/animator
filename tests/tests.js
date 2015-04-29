@@ -66,7 +66,7 @@ var Animations = {
 	}
 };
 
-var animator       = new Animator(),
+var queue          = new Animator.Queue(),
 	form           = document.getElementById('form'),
 	select         = document.getElementById('animations'),
 	duration       = document.getElementById('duration'),
@@ -98,16 +98,17 @@ form.addEventListener('submit', function(event){
 	if (!dur) {
 		dur = duration.value = 380;
 	}
-	animator.addAnimation(
+	queue.addAnimation(
 		'animate',
 		select.value,
 		dur
 	);
+	queue.start();
 }, false);
 
 clearQueue.addEventListener('click', function(event){
 	event.preventDefault();
-	animator.clearQueue('animate');
+	queue.clearQueue('animate');
 	// Clear out all styles from the animation
 	var element = document.getElementById('animate');
 	element.setAttribute('style', '');
@@ -117,7 +118,7 @@ clearQueue.addEventListener('click', function(event){
 pauseResume.addEventListener('click', function(event){
 	event.preventDefault();
 
-	var tween = animator.getCurrentAnimation('animate'),
+	var tween = queue.getCurrentAnimation('animate'),
 		element;
 
 	if (!tween) {
@@ -126,10 +127,10 @@ pauseResume.addEventListener('click', function(event){
 
 	element = document.getElementById('animate');
 	if (tween.paused) {
-		animator.resume();
+		queue.resume();
 		document.body.className = '';
 	} else {
-		animator.pause();
+		queue.pause();
 		document.body.className = 'paused';
 	}
 
@@ -140,7 +141,7 @@ var element = document.getElementById('animate');
 element.style.opacity = 0;
 
 setTimeout(function() {
-	animator.addTween(element, 500, {
+	queue.addTween(element, 500, {
 		_timing: 'ease-in-out',
 		backgroundColor: {
 			rgb: [0, 0, 0]
@@ -154,11 +155,11 @@ setTimeout(function() {
 		console.log('Tween finished');
 	});
 
-	animator.addDelay(300, function(){
+	queue.addDelay(300, function(){
 		console.log('And we just experienced a 300ms second delay');
 	});
 
-	animator.addTween(element, 700, {
+	queue.addTween(element, 700, {
 		_timing: 'ease-in-out',
 		backgroundColor: {
 			rgba: [0, 0, 255, 0.5]
@@ -169,7 +170,7 @@ setTimeout(function() {
 		}
 	});
 
-	animator.addTween(element, 500, {
+	queue.addTween(element, 500, {
 		_timing: 'ease-in-out',
 		opacity: 0.5,
 		backgroundColor: {
@@ -182,13 +183,13 @@ setTimeout(function() {
 		}
 	});
 
-	animator.addTween(element, 500, {
+	queue.addTween(element, 500, {
 		_timing: 'ease-in-out',
 		_delay: 300,
 		borderRadius: 100
 	});
 
-	animator.addTween(element, 500, {
+	queue.addTween(element, 500, {
 		_timing: 'ease-in-out',
 		borderRadius: [0],
 		opacity: 1,
@@ -199,6 +200,8 @@ setTimeout(function() {
 			translate3d: [0, 0, 0]
 		}
 	});
+
+	queue.start();
 
 }, 500);
 

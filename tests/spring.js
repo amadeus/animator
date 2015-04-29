@@ -2,7 +2,7 @@
 
 var element = document.getElementById('spring');
 
-var animator = new Animator();
+var queue = new Animator.Queue();
 
 var coords = {
 	x: window.innerWidth / 2,
@@ -22,7 +22,7 @@ var setSpring = function(){
 	if (isNaN(stiff) || isNaN(fric)) {
 		return;
 	}
-	animator.addSpring(element, {
+	queue.addSpring(element, {
 		stiffness : stiff,
 		friction : fric,
 		threshold : 0.1,
@@ -34,10 +34,11 @@ var setSpring = function(){
 			}
 		}
 	});
+	queue.start();
 };
 
 var disableSpring = function(){
-	animator.clearCurrent();
+	queue.clearCurrent();
 };
 
 document.body.addEventListener('mousemove', function(event){
