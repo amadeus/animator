@@ -32,6 +32,9 @@ var setSpring = function(){
 			transform: {
 				translate3d: ['{x}px', '{y}px', '0px']
 			}
+		},
+		_finished: function(){
+			console.log('The spring has been removed!');
 		}
 	});
 	queue.start();

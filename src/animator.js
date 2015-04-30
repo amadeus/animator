@@ -168,7 +168,7 @@ updateSpring = function(tick){
 
 	isFinished = true;
 	for (name in this.target) {
-		if (this.finished[name] !== true) {
+		if (this.complete[name] !== true) {
 			isFinished = false;
 		}
 	}
@@ -388,13 +388,13 @@ Internal = {
 	},
 
 	getSpringStyle: function(items, spring, tick, separator){
-		var value = '', name, x, key, accel, vel, current, target, finished;
+		var value = '', name, x, key, accel, vel, current, target, complete;
 
 		target   = spring.target;
 		current  = spring.current;
 		vel      = spring.vel;
 		accel    = spring.accel;
-		finished = spring.finished;
+		complete = spring.complete;
 
 		if (items.length) {
 			for (x = 0; x < items.length; x += 2) {
@@ -410,13 +410,13 @@ Internal = {
 						accel[key] = 0;
 						vel[key] = 0;
 						current[key] = target[key];
-						if (finished[key] === false) {
-							finished[key] = true;
+						if (complete[key] === false) {
+							complete[key] = true;
 						}
 					} else if (current[key] !== target[key]){
 						vel[key]     += accel[key] * tick;
 						current[key] += vel[key] * tick;
-						finished[key] = false;
+						complete[key] = false;
 					}
 					value += current[key];
 				} else {
@@ -710,15 +710,15 @@ Internal = {
 		}
 	},
 
-	setupSpring: function(element, settings, queue){
-		var name, previousSettings, x;
+	setupSpring: function(element, reference, queue){
+		var name, previousSettings, x, settings;
 
 		if (_typeOf(element) === 'string') {
 			element = document.getElementById(element);
 		}
 
-		if (_typeOf(settings) !== 'object') {
-			throw new TypeError('Animator.Queue.addSpring spring settings must be an object: ' + settings);
+		if (_typeOf(reference) !== 'object') {
+			throw new TypeError('Animator.Queue.addSpring spring settings must be an object: ' + reference);
 		}
 
 		if (queue) {
@@ -736,24 +736,36 @@ Internal = {
 		// If there is a spring already set on the current element, update its
 		// values, I probably need to do more about templating though.
 		if (previousSettings) {
-			previousSettings.stiffness  = settings.stiffness;
-			previousSettings.friction   = settings.friction;
-			previousSettings.permanent  = settings.permanent;
+			previousSettings.threshold  = reference.threshold;
+			previousSettings.stiffness  = reference.stiffness;
+			previousSettings.friction   = reference.friction;
+			previousSettings.permanent  = reference.permanent;
+			previousSettings._finished  = reference._finished;
 			return;
 		}
 
-		if (settings.styles) {
-			settings.styles = Internal.convertObject(settings.styles);
+		settings = {
+			type      : 'spring',
+			update    : updateSpring,
+			_finished : reference._finished,
+
+			target    : reference.target,
+			stiffness : reference.stiffness,
+			friction  : reference.friction,
+			threshold : reference.threshold,
+			permanent : reference.permanent,
+			complete  : {},
+			current   : {},
+			vel       : {},
+			accel     : {}
+		};
+
+		if (reference.styles) {
+			settings.styles = Internal.convertObject(reference.styles);
 		}
 
-		settings.type     = 'spring';
-		settings.update   = updateSpring;
-		settings.finished = {};
-		settings.current  = {};
-		settings.vel      = {};
-		settings.accel    = {};
-		for (name in settings.target) {
-			settings.current[name] = settings.target[name];
+		for (name in reference.target) {
+			settings.current[name] = reference.target[name];
 			settings.vel[name]     = 0;
 			settings.accel[name]   = 0;
 		}
