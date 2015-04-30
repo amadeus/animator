@@ -177,10 +177,30 @@ updateSpring = function(tick){
 };
 
 updateScene = function(tick){
+	var x, queue;
 	if (this.delta === undefined) {
 		this.delta = 0;
 	} else {
 		this.delta += tick;
+	}
+
+	// First determine if any scenes need to be added to running
+	for (x = 0; x < this.queues.length;) {
+		if (this.queues[x].start <= this.delta) {
+			queue = this.queues.splice(x, 1)[0].queue;
+			Internal.generateFromTweens(queue[0]);
+			this.running.push(queue);
+		} else {
+			x += 1;
+		}
+	}
+
+	Internal.iterate(this.running, tick);
+
+	if (this.running.length) {
+		return false;
+	} else {
+		return true;
 	}
 };
 
@@ -818,6 +838,93 @@ Internal = {
 		);
 
 		return anim;
+	},
+
+	setupScene: function(sceneSettings){
+		var scene, itemRef, item, anim, animRef, x, y;
+
+		if (_typeOf(sceneSettings) === 'string') {
+			sceneSettings = Animator.Scenes[sceneSettings];
+		}
+
+		if (_typeOf(sceneSettings) !== 'array') {
+			throw new Error('Internal.setupScene: Not valid scene - ' + sceneSettings);
+		}
+
+		scene = {
+			type    : 'scene',
+			update  : updateScene,
+			queues  : [],
+			running : []
+		};
+
+		for (x = 0; x < sceneSettings.length; x++) {
+			itemRef = sceneSettings[x];
+
+			if (!itemRef || !itemRef.queue) {
+				throw new Error('Animator - Internal.setupScene: Invalid item - ' + itemRef);
+			}
+			if (_typeOf(itemRef.queue) !== 'array') {
+				itemRef.queue = [itemRef.queue];
+			}
+			if (!itemRef.start) {
+				itemRef.start = 0;
+			}
+			item = {
+				start: itemRef.start,
+				queue: []
+			};
+			for (y = 0; y < itemRef.queue.length; y++) {
+				anim = undefined;
+				animRef = itemRef.queue[y];
+
+				if (!animRef.element && animRef.duration) {
+					anim = Internal.setupDelay(
+						item.duration,
+						item.callback
+					);
+				} else if (animRef.element && animRef.to) {
+					anim = Internal.setupTweenFromObject(animRef);
+				} else if (animRef.element && animRef.animation) {
+					anim = Internal.setupAnimation(
+						animRef.element,
+						animRef.animation,
+						animRef.duration,
+						animRef._finished
+					);
+				} else if (animRef.element && animRef.spring) {
+					anim = Internal.setupSpring(
+						item.element,
+						item.settings
+					);
+				} else if (animRef.scene) {
+					anim = Internal.setupScene(animRef.scene);
+				}
+
+				if (!anim) {
+					continue;
+				}
+				item.queue.push(anim);
+			}
+			if (item.queue.length) {
+				scene.queues.push(item);
+			}
+		}
+
+		return scene;
+	},
+
+	setupTweenFromObject: function(obj){
+		var args = [obj.element, obj.duration];
+
+		if (obj.from) {
+			args.push(obj.from);
+		}
+		args.push(obj.to);
+		if (args._finished) {
+			args.push(obj._finished);
+		}
+		return Internal.setupTween.apply(Internal, args);
 	}
 
 };
@@ -826,6 +933,12 @@ Animator = {
 
 	Animations: {},
 	Scenes: {},
+
+	runScene: function(scene) {
+		var queue = new Animator.Queue();
+		queue.addScene(scene);
+		return queue.start();
+	},
 
 	springElement: function(){
 		var queue = new Animator.Queue();
@@ -1063,7 +1176,9 @@ Animator.Queue.prototype = {
 		}
 	},
 
-	addScene: function(scene){
+	addScene: function(id){
+		var scene = Internal.setupScene(id);
+		this._queue.push(scene);
 		return this;
 	},
 
