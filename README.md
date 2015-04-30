@@ -175,6 +175,109 @@ transform styles will 'spring towards' the target values.  You can customize
 `.stiffness` and `.friction` for different spring effects.
 
 
+### Scenes
+
+The final piece of the puzzle in all this library are Scenes.  Like the name
+implies, you can think of Scenes as complex sequences of animations.  Not only
+can you create various parallel queues, you can even have Scenes build off of
+each other to recursively call upon other scenes.  The API for scenes of course
+is a bit more complicated, but is still representative of what you've used
+previously.
+
+You build Scenes in a very similar way to Animations.  First you define them in
+their JSON format, and then you can run them or add them to queues as usual.
+
+In their simplest form, Scenes are just Queues that you can make start at
+specific time intervals.
+
+```js
+var scene = [
+    // Each object represents both a queue, and an
+    // execution time for that queue
+    {
+        // Start represents the time in milliseconds to start executing
+        // the queue.  If the value is 0 or no value is set, the queue
+        // will be kicked off immediately
+        start: 0,
+
+        // A queue is an array of object definitions -
+        // these can include delays, animations, tweens,
+        // springs and even other scenes that will execute
+        // in order. Think of them as a JSON definition format
+        // for the Animator.Queue API
+        queue: [
+            // This is a definition for a tween -
+            // It is automatically detected because it
+            // includes an element key and a to key
+            {
+                element: 'element-id',
+                duration: 800,
+                to: {
+                    opacity: 0
+                }
+            },
+            // This is the definition for a delay -
+            // It has a duration key, but no element key
+            {
+                duration: 200,
+                _finished: function(){
+                    console.log('This will fire at the end of the delay');
+                }
+            },
+            // This is the definition for an animation -
+            // It has an element key and an animation key
+            {
+                element: 'another-element-id',
+                animation: 'popin'
+            }
+        ]
+    }, {
+        // This particular queue will be kicked off after 200ms after
+        // the scene has started running.
+        start: 200,
+
+        queue: [
+            // This is the definition for a spring -
+            // It has an element key and a spring key
+            // For sake of brevity I have left it empty - it would
+            // be identical to the settings passed in for a spring animation
+            {
+                element: 'element-id',
+                spring: {}
+            },
+            // This is the defiition for a scene -
+            // It just has a key for the scene id
+            {
+                scene: 'another-scene'
+            }
+        ]
+    }
+];
+
+// With the JSON format designed for a Scene, it must be
+// created as a scene: This first argument is the scene id,
+// the second is the JSON definition from above
+Animator.createScene('my-scene', scene);
+
+// Once a scene is created, you can kick if off anytime
+// Just use the spring id you specified on creation
+Animator.runScene('my-scene');
+```
+
+Scenes can also be added an existing Queue using the `.addScene` API:
+
+```js
+// Instantiate a queue
+var queue = new Animator.Queue();
+
+// Add the scene to the queue
+queue.addScene('my-scene');
+
+// Start animating the queue
+queue.start();
+```
+
+
 ## Demo/Tests
 
 These aren't like real unit test tests, just various pages documenting and
