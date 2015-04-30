@@ -36,16 +36,26 @@ var scene = [
 		]
 	}, {
 		start: 400,
-		queue: {
-			element: 'third',
-			duration: 1000,
-			to: {
-				transform: {
-					translate3d: [100, 0, 0]
-				},
-				_timing: 'ease-in-out'
+		queue: [
+			{
+				scene: 'block-scene2'
 			}
-		}
+		]
+	},
+	{
+		start: 400,
+		queue: [
+			{
+				element: 'third',
+				duration: 1000,
+				to: {
+					transform: {
+						translate3d: [100, 0, 0]
+					},
+					_timing: 'ease-in-out'
+				}
+			}
+		]
 	}, {
 		start: 0,
 		queue: {
@@ -66,7 +76,33 @@ var scene = [
 	}
 ];
 
+var scene2 = {
+	start: 0,
+	queue: [
+		{
+			element: document.body,
+			duration: 500,
+			to: {
+				transform: {
+					scale: [0.5, 0.5],
+				},
+				_timing: 'ease-in'
+			}
+		}, {
+			element: document.body,
+			duration: 500,
+			to: {
+				transform: {
+					scale: [1, 1],
+				},
+				_timing: 'ease-out'
+			}
+		}
+	]
+};
+
 Animator.createScene('block-scene', scene);
+Animator.createScene('block-scene2', scene2);
 Animator.runScene('block-scene');
 
 })();
