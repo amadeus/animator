@@ -177,7 +177,7 @@ transform styles will 'spring towards' the target values.  You can customize
 
 ### Scenes
 
-The final piece of the puzzle in all this library are Scenes.  Like the name
+The final piece of the puzzle in this library are Scenes.  Like the name
 implies, you can think of Scenes as complex sequences of animations.  Not only
 can you create various parallel queues, you can even have Scenes build off of
 each other to recursively call upon other scenes.  The API for scenes of course
