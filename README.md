@@ -277,6 +277,8 @@ queue.addScene('my-scene');
 queue.start();
 ```
 
+I recommend you checkout `tests/scene.html` for an example implementation.
+
 
 ## Demo/Tests
 
