@@ -256,7 +256,8 @@ Internal = {
 			window.stats.end();
 		}
 
-		if (!Internal.isRunning) {
+		if (!Internal.animating.length) {
+			Internal.isRunning = false;
 			Internal._last = undefined;
 			return;
 		}
