@@ -11,10 +11,11 @@
 	} else {
 		root.Animator = factory();
 	}
-})(this, function() {
+})(this, function() { 'use strict';
 
-var Animator, REGEX, Internal, _typeOf, _requestAnimationFrame, _performance,
-	_nowOffset, _dateNow, _getComputedStyle, _toCamelCase;
+var Animator, REGEX, updateTween, updateDelay, updateSpring, updateScene, Internal, _typeOf,
+	_requestAnimationFrame, _performance, _nowOffset, _dateNow, _getComputedStyle,
+	_toCamelCase;
 
 REGEX = {
 	digit            : /^[-0-9.]+/,
@@ -97,6 +98,112 @@ _toCamelCase = function(string){
 	});
 };
 
+updateDelay = function(tick){
+	if (this.delta === undefined) {
+		this.delta = 0;
+	} else {
+		this.delta += tick;
+	}
+
+	if (this.duration > this.delta) {
+		return false;
+	} else {
+		return true;
+	}
+};
+
+updateTween = function(tick){
+	var delta, prop, timing, from, to, duration, element;
+
+	element = this.element;
+
+	if (this.delta === undefined) {
+		this.delta = 0;
+	} else {
+		this.delta += tick;
+	}
+
+	delta    = this.delta;
+	from     = this.from;
+	to       = this.to;
+	duration = this.duration;
+
+	timing = this.from._timing || Animator.TWEENS.LINEAR;
+
+	for (prop in from) {
+		if (REGEX.startsWith.test(prop) || !from[prop]) {
+			continue;
+		}
+
+		element.style[prop] = Internal.getTweenStyle(
+			from[prop],
+			to[prop],
+			timing,
+			delta,
+			duration
+		);
+	}
+
+	if (delta >= duration) {
+		return true;
+	} else {
+		return false;
+	}
+};
+
+updateSpring = function(tick){
+	var name, styles, element, isFinished;
+
+	element    = this.element;
+	styles     = this.styles;
+	tick       = tick / 1000;
+
+	for (name in styles) {
+		element.style[name] = Internal.getSpringStyle(
+			styles[name],
+			this,
+			tick
+		);
+	}
+
+	isFinished = true;
+	for (name in this.target) {
+		if (this.finished[name] !== true) {
+			isFinished = false;
+		}
+	}
+
+	return isFinished;
+};
+
+updateScene = function(tick){
+	var x, queue;
+	if (this.delta === undefined) {
+		this.delta = 0;
+	} else {
+		this.delta += tick;
+	}
+
+	// First determine if any scenes need to be added to running
+	for (x = 0; x < this.queues.length;) {
+		if (this.queues[x].start <= this.delta) {
+			queue = this.queues.splice(x, 1)[0].queue;
+			Internal.generateFromTweens(queue[0]);
+			this.running.push(queue);
+		} else {
+			x += 1;
+		}
+	}
+
+	Internal.iterate(this.running, tick);
+
+	if (this.running.length) {
+		return false;
+	} else {
+		return true;
+	}
+};
+
 Internal = {
 
 	isRunning: false,
@@ -104,41 +211,18 @@ Internal = {
 	_index: 0,
 	_last: undefined,
 
-	elements  : {},
 	animating : [],
-	toRemove  : [],
 
-	addItem: function(type, element, tween){
-		var idKey = '_' + type + 'ID',
-			id    = element[idKey],
-			previousTweens;
-
-		// Element is currently animating
-		if (!id) {
-			id = element[idKey] = type + '-' + this._index++;
-		}
-
-		previousTweens = this.elements[id];
-		if (previousTweens) {
-			// this.elements[id] = previousTweens.concat.apply(this.elements[id], tweens);
-			// this.elements[id].element = element;
-			// Trying out apply to reduce garbage... even if it's a bit slower...
-			if (_typeOf(tween) === 'array') {
-				previousTweens.push.apply(previousTweens, tween);
-			} else {
-				previousTweens.push(tween);
-			}
+	addQueue: function(queue){
+		if (
+			this.animating.indexOf(queue) >= 0 ||
+			!queue.length
+		) {
 			return;
 		}
 
-		if (_typeOf(tween) === 'array') {
-			this.elements[id] = tween;
-		} else {
-			this.elements[id] = [tween];
-		}
-		this.elements[id].element = element;
-		this.animating.push(id);
-
+		Internal.generateFromTweens(queue[0]);
+		this.animating.push(queue);
 		this.start();
 	},
 
@@ -153,17 +237,10 @@ Internal = {
 	},
 
 	run: function(){
-		var animating = Internal.animating,
-			toRemove  = Internal.toRemove,
-			a, len, anims, now, done, index, id, tick;
+		var now, tick;
 
 		if (window.stats) {
 			window.stats.begin();
-		}
-		if (Internal.isRunning) {
-			_requestAnimationFrame(Internal.run);
-		} else {
-			return;
 		}
 
 		now = _performance.now();
@@ -174,109 +251,76 @@ Internal = {
 
 		tick = now - Internal._last;
 
-		for (a = 0, len = animating.length; a < len; a++) {
-			anims = Internal.elements[animating[a]];
-			if (anims[0].paused) {
-				continue;
-			}
+		Internal.iterate(Internal.animating, tick);
 
-			if (anims[0].type === 'tween') {
-				done = Internal.updateTween(anims.element, anims[0], tick);
-				if (done) {
-					if (anims[0].to._onFrame) {
-						anims[0].to._onFrame(anims.element, anims[0]);
-					}
-					if (anims[0].to._finished) {
-						anims[0].to._finished(anims.element, anims[0]);
-					}
-					// Splice seems to eek out a few small milliseconds over shift
-					anims.splice(0, 1);
-				}
-
-				if (done && !anims.length) {
-					// toRemove[toRemove.length] = animating[a];
-					toRemove.push(animating[a]);
-				}
-				continue;
-			}
-
-			if (anims[0].type === 'spring') {
-				Internal.updateSpring(anims.element, anims[0], tick);
-				continue;
-			}
-		}
-
-		if (toRemove.length) {
-			for (a = 0, len = toRemove.length; a < len; a++) {
-				id = toRemove[a];
-				Internal.elements[id] = undefined;
-				index = animating.indexOf(id);
-				if (index >= 0) {
-					animating.splice(index, 1);
-				}
-			}
-
-			// No need to run anymore
-			if (!animating.length) {
-				Internal._last = undefined;
-				Internal.isRunning = false;
-			}
-
-			// Clean out the array
-			toRemove.length = 0;
-		}
-
-		Internal._last = now;
 		if (window.stats) {
 			window.stats.end();
 		}
+
+		if (!Internal.animating.length) {
+			Internal.isRunning = false;
+			Internal._last = undefined;
+			return;
+		}
+
+		Internal._last = now;
+		_requestAnimationFrame(Internal.run);
 	},
 
-	updateTween: function(element, tween, tick){
-		var delta, prop, timing, from, to, duration;
+	iterate: function(queues, tick){
+		var a, anim, done;
 
-		if (!tween.from) {
-			tween.from = Internal.getFromTween(element, tween.to);
-		}
+		for (a = 0; a < queues.length;) {
+			anim = queues[a][0];
+			done = undefined;
 
-		if (tween.delta === undefined) {
-			tween.delta = 0;
-		} else {
-			tween.delta += tick;
-		}
-
-		if (tween.delay && tween.delay > tween.delta) {
-			return false;
-		} else if (tween.delay) {
-			delta = tween.delta - tween.delay;
-		} else {
-			delta = tween.delta;
-		}
-
-		from = tween.from;
-		to = tween.to;
-		duration = tween.duration;
-
-		timing = tween.from._timing || Animator.TWEENS.LINEAR;
-
-		for (prop in from) {
-			if (REGEX.startsWith.test(prop) || !from[prop]) {
+			if (!anim) {
+				queues.splice(a, 1);
 				continue;
 			}
 
-			element.style[prop] = Internal.getTweenStyle(
-				from[prop],
-				to[prop],
-				timing,
-				delta,
-				duration
-			);
+			if (anim.paused) {
+				a += 1;
+				continue;
+			}
+
+			done = anim.update(tick);
+
+			if (done && !anim.permanent) {
+				if (anim.to) {
+					if (anim.to._onFrame) {
+						anim.to._onFrame(anim);
+					}
+					if (anim.to._finished) {
+						anim.to._finished(anim);
+					}
+				}
+				if (anim._onFrame) {
+					anim._onFrame(anim);
+				}
+				if (anim._finished) {
+					anim._finished(anim);
+				}
+				queues[a].splice(0, 1);
+				if (queues[a].length) {
+					Internal.generateFromTweens(queues[a][0]);
+				}
+				continue;
+			}
+			a += 1;
 		}
 
-		if (delta >= duration) {
-			return true;
-		} else {
-			return false;
+		anim  = undefined;
+
+	},
+
+	generateFromTweens: function(anim){
+		if (!anim) {
+			return;
+		}
+
+		if (anim && anim.type === 'tween' && !anim.from) {
+			anim.from = Internal.getFromTween(anim.element, anim.to);
 		}
 	},
 
@@ -343,30 +387,14 @@ Internal = {
 		return value;
 	},
 
-	updateSpring: function(element, spring, tick){
-		var name, styles;
-
-		styles  = spring.styles;
-		tick   = tick / 1000;
-
-		for (name in styles) {
-			element.style[name] = Internal.getSpringStyle(
-				styles[name],
-				spring,
-				tick
-			);
-		}
-
-		return false;
-	},
-
 	getSpringStyle: function(items, spring, tick, separator){
-		var value = '', name, x, key, accel, vel, pos, target;
+		var value = '', name, x, key, accel, vel, current, target, finished;
 
-		target = spring.target;
-		pos    = spring.pos;
-		vel    = spring.vel;
-		accel  = spring.accel;
+		target   = spring.target;
+		current  = spring.current;
+		vel      = spring.vel;
+		accel    = spring.accel;
+		finished = spring.finished;
 
 		if (items.length) {
 			for (x = 0; x < items.length; x += 2) {
@@ -374,19 +402,23 @@ Internal = {
 				if (x > 0 && separator) {
 					value += separator;
 				}
-				if (typeof pos[items[x]] !== 'undefined') {
+				if (typeof current[items[x]] !== 'undefined') {
 					key = items[x];
 
-					accel[key] = spring.stiffness * (target[key] - pos[key]) - spring.friction * vel[key];
+					accel[key] = spring.stiffness * (target[key] - current[key]) - spring.friction * vel[key];
 					if (Math.abs(accel[key]) < spring.threshold) {
 						accel[key] = 0;
 						vel[key] = 0;
-						pos[key] = target[key];
-					} else {
-						vel[key] += accel[key] * tick;
-						pos[key] += vel[key] * tick;
+						current[key] = target[key];
+						if (finished[key] === false) {
+							finished[key] = true;
+						}
+					} else if (current[key] !== target[key]){
+						vel[key]     += accel[key] * tick;
+						current[key] += vel[key] * tick;
+						finished[key] = false;
 					}
-					value += pos[key];
+					value += current[key];
 				} else {
 					value +=  items[x];
 				}
@@ -446,8 +478,8 @@ Internal = {
 		return newObject;
 	},
 
-	keyframesToTweens: function(animation, duration, finished){
-		var tweens = [],
+	keyframesToTweens: function(animation, duration, element, finished){
+		var queue = [],
 			from, to, fromPercent, toPercent, percent, tween;
 
 		for (percent in animation) {
@@ -465,19 +497,21 @@ Internal = {
 
 			tween = {
 				type     : 'tween',
+				update   : updateTween,
+				element  : element,
 				from     : from,
 				to       : to,
 				duration : ((duration * toPercent) - (duration * fromPercent)) >> 0
 			};
 
-			tweens.push(tween);
+			queue.push(tween);
 
 			from = to;
 			fromPercent = toPercent;
 		}
 
 		if (_typeOf(finished) === 'function') {
-			tweens[tweens.length - 1].to._finished = finished;
+			queue[queue.length - 1].to._finished = finished;
 		}
 
 		to   = undefined;
@@ -485,26 +519,33 @@ Internal = {
 		fromPercent = undefined;
 		toPercent   = undefined;
 
-		return tweens;
+		return queue;
 	},
 
-	getValueAndUnits: function(items, prop){
-		var value, unit, x, match;
+	getValueAndUnits: function(itemsRef, prop){
+		var items, value, unit, x, match;
+
+		if (REGEX.startsWith.test(prop)) {
+			return itemsRef;
+		}
 
 		if (
-			_typeOf(items) !== 'number' &&
-			_typeOf(items) !== 'string' &&
-			_typeOf(items) !== 'array'
+			_typeOf(itemsRef) !== 'number' &&
+			_typeOf(itemsRef) !== 'string' &&
+			_typeOf(itemsRef) !== 'array'
 		) {
-			return items;
+			return itemsRef;
 		}
 
-		if (_typeOf(items) === 'string') {
-			items = items.split(' ');
-		}
-
-		if (_typeOf(items) !== 'array') {
-			items = [items];
+		if (_typeOf(itemsRef) === 'string') {
+			items = itemsRef.split(' ');
+		} else if (_typeOf(itemsRef) !== 'array') {
+			items = [itemsRef];
+		} else {
+			items = [];
+			for (x = 0; x < itemsRef.length; x++) {
+				items[x] = itemsRef[x];
+			}
 		}
 
 		for (x = 0; x < items.length; x += 2) {
@@ -604,8 +645,7 @@ Internal = {
 
 	getFromTween: function(element, to){
 		var from = {},
-			cStyle = _getComputedStyle(element),
-			key, value;
+			cStyle, key, value;
 
 		for (key in to) {
 			if (REGEX.startsWith.test(key)) {
@@ -613,7 +653,15 @@ Internal = {
 				continue;
 			}
 
-			value = element.style[key] || cStyle[key] || 0;
+			value = element.style[key];
+			if (!value) {
+				// We should ONLY grab computed style if necessary.
+				if (!cStyle) {
+					 cStyle = _getComputedStyle(element);
+				}
+				value = cStyle[key] || 0;
+			}
+
 			if (REGEX.isTransform.test(key) && value === 'none') {
 				value = {};
 			} else if (REGEX.containsCSSFunc.test(value)) {
@@ -662,15 +710,35 @@ Internal = {
 		}
 	},
 
-	setupSpring: function(element, settings){
-		var name, previousSettings;
+	setupSpring: function(element, settings, queue){
+		var name, previousSettings, x;
+
+		if (_typeOf(element) === 'string') {
+			element = document.getElementById(element);
+		}
+
+		if (_typeOf(settings) !== 'object') {
+			throw new TypeError('Animator.Queue.addSpring spring settings must be an object: ' + settings);
+		}
+
+		if (queue) {
+			for (x = 0; x < queue.length; x++) {
+				if (
+					queue[x].type === 'spring' &&
+					queue[x].element === element
+				) {
+					previousSettings = queue[x];
+					break;
+				}
+			}
+		}
 
 		// If there is a spring already set on the current element, update its
 		// values, I probably need to do more about templating though.
-		previousSettings = Internal.elements[element._springID];
 		if (previousSettings) {
-			previousSettings[0].stiffness = settings.stiffness;
-			previousSettings[0].friction = settings.friction;
+			previousSettings.stiffness  = settings.stiffness;
+			previousSettings.friction   = settings.friction;
+			previousSettings.permanent  = settings.permanent;
 			return;
 		}
 
@@ -678,77 +746,50 @@ Internal = {
 			settings.styles = Internal.convertObject(settings.styles);
 		}
 
-		settings.type = 'spring';
-		settings.pos   = {};
-		settings.vel   = {};
-		settings.accel = {};
+		settings.type     = 'spring';
+		settings.update   = updateSpring;
+		settings.finished = {};
+		settings.current  = {};
+		settings.vel      = {};
+		settings.accel    = {};
 		for (name in settings.target) {
-			settings.pos[name]   = settings.target[name];
-			settings.vel[name]   = 0;
-			settings.accel[name] = 0;
+			settings.current[name] = settings.target[name];
+			settings.vel[name]     = 0;
+			settings.accel[name]   = 0;
 		}
 
-		Internal.addItem('spring', element, settings);
-	}
+		settings.element = element;
 
-};
+		if (!previousSettings && queue) {
+			queue.push(settings);
+		}
 
-Animator = function(){
-	this._animations = {};
-};
-
-Animator.prototype = {
-
-	isRunning: function(){
-		return Internal.isRunning;
+		return settings;
 	},
 
-	addAnimation: function(name, keyframes){
-		var frame, previousFrame;
-
-		if (
-			_typeOf(name)      !== 'string' ||
-			_typeOf(keyframes) !== 'object'
-		) {
-			return this;
-		}
-
-		for (frame in keyframes) {
-			keyframes[frame] = Internal.convertFrame(keyframes[frame], previousFrame);
-			previousFrame = keyframes[frame];
-		}
-
-		this._animations[name] = keyframes;
-
-		return this;
+	setupDelay: function(duration, callback){
+		var delay = {
+			type      : 'delay',
+			update    : updateDelay,
+			duration  : parseInt(duration, 10) || 0,
+			_finished : callback
+		};
+		return delay;
 	},
 
-	springElement: function(element, settings){
-		if (_typeOf(element) === 'string') {
-			element = document.getElementById(element);
-		}
-
-		if (_typeOf(settings) !== 'object') {
-			throw new TypeError('Animator.springElement spring settings must be an object: ' + settings);
-		}
-
-		Internal.setupSpring(element, settings);
-
-		return this;
-	},
-
-	tweenElement: function(element, duration){
+	setupTween: function(element, duration){
 		var from, to, tween, frames, callback;
+
 		if (_typeOf(element) === 'string') {
 			element = document.getElementById(element);
 		}
 		if (_typeOf(element) !== 'element') {
 			throw new Error(
-				'Animator.tweenElement: Must provide a valid element to tween: ' + element
+				'Animator.Queue.addTween: Must provide a valid element to tween: ' + element
 			);
 		}
 		if (_typeOf(duration) !== 'number') {
-			throw new TypeError('Animator.tweenElement: Must provide a valid duration: ' + duration);
+			throw new TypeError('Animator.Queue.addTween: Must provide a valid duration: ' + duration);
 		}
 
 		frames = Array.prototype.slice.call(arguments, 2);
@@ -766,6 +807,8 @@ Animator.prototype = {
 
 		tween = {
 			type     : 'tween',
+			update   : updateTween,
+			element  : element,
 			duration : duration,
 			from     : from,
 			to       : to
@@ -775,287 +818,455 @@ Animator.prototype = {
 			tween.to._finished = callback;
 		}
 
-		Internal.addItem('tween', element, tween);
-
-		return this;
+		return tween;
 	},
 
-	animateElement: function(element, animation, duration, finished){
-		var tweens;
-
+	setupAnimation: function(element, animation, duration, finished){
 		if (_typeOf(element) === 'string') {
 			element = document.getElementById(element);
 		}
 
 		if (_typeOf(element) !== 'element') {
-			throw new Error('Animator.animate: Must provide a valid element to animate: ' + element);
+			throw new Error('Animator.Queue.addAnimation: Must provide a valid element to animate: ' + element);
 		}
 
 		duration = duration || 1000;
 
-		if (!this._animations[animation]) {
-			throw new Error('Animator.animateElement: Animation does not exist: ' + animation);
+		if (!Animator.Animations[animation]) {
+			throw new Error('Animator.Queue.addAnimation: Animation does not exist: ' + animation);
 		}
 
-		tweens = Internal.keyframesToTweens(
-			this._animations[animation],
+		var anim = Internal.keyframesToTweens(
+			Animator.Animations[animation],
 			duration,
+			element,
 			finished
 		);
 
-		Internal.addItem('tween', element, tweens);
-
-		return this;
+		return anim;
 	},
 
-	removeSpring: function(element){
-		if (_typeOf(element) === 'spring') {
-			element = document.getElementById(element);
+	setupScene: function(sceneSettings){
+		var scene, itemRef, item, anim, animRef, x, y;
+
+		if (_typeOf(sceneSettings) === 'string') {
+			sceneSettings = Animator.Scenes[sceneSettings];
 		}
 
-		if (!element || !element._springID) {
-			return this;
+		if (_typeOf(sceneSettings) !== 'array') {
+			throw new Error('Internal.setupScene: Not valid scene - ' + sceneSettings);
 		}
 
-		if (Internal.isRunning) {
-			Internal.toRemove.push(element._springID);
+		scene = {
+			type    : 'scene',
+			update  : updateScene,
+			queues  : [],
+			running : []
+		};
+
+		for (x = 0; x < sceneSettings.length; x++) {
+			itemRef = sceneSettings[x];
+
+			if (!itemRef || !itemRef.queue) {
+				throw new Error('Animator - Internal.setupScene: Invalid item - ' + itemRef);
+			}
+			if (_typeOf(itemRef.queue) !== 'array') {
+				itemRef.queue = [itemRef.queue];
+			}
+			if (!itemRef.start) {
+				itemRef.start = 0;
+			}
+			item = {
+				start: itemRef.start,
+				queue: []
+			};
+			for (y = 0; y < itemRef.queue.length; y++) {
+				anim = undefined;
+				animRef = itemRef.queue[y];
+
+				if (!animRef.element && animRef.duration) {
+					anim = Internal.setupDelay(
+						animRef.duration,
+						animRef._finished
+					);
+				} else if (animRef.element && animRef.to) {
+					anim = Internal.setupTweenFromObject(animRef);
+				} else if (animRef.element && animRef.animation) {
+					anim = Internal.setupAnimation(
+						animRef.element,
+						animRef.animation,
+						animRef.duration,
+						animRef._finished
+					);
+				} else if (animRef.element && animRef.spring) {
+					anim = Internal.setupSpring(
+						animRef.element,
+						animRef.spring
+					);
+				} else if (animRef.scene) {
+					anim = Internal.setupScene(animRef.scene);
+				}
+
+				if (!anim) {
+					continue;
+				}
+				if (_typeOf(anim) === 'array') {
+					item.queue.push.apply(item.queue, anim);
+				} else {
+					item.queue.push(anim);
+				}
+			}
+			if (item.queue.length) {
+				scene.queues.push(item);
+			}
 		}
 
-		return this;
+		return scene;
 	},
 
-	clearTweenQueue: function(element){
-		if (_typeOf(element) === 'string') {
-			element = document.getElementById(element);
+	setupTweenFromObject: function(obj){
+		var args = [obj.element, obj.duration];
+
+		if (obj.from) {
+			args.push(obj.from);
 		}
-
-		if (!element || !element._tweenID) {
-			return this;
+		args.push(obj.to);
+		if (args._finished) {
+			args.push(obj._finished);
 		}
-
-		if (Internal.isRunning) {
-			Internal.toRemove.push(element._tweenID);
-		}
-
-		return this;
-	},
-
-	pauseElement: function(element){
-		if (_typeOf(element) === 'string') {
-			element = document.getElementById(element);
-		}
-
-		if (!element || !element._tweenID) {
-			return this;
-		}
-
-		if (Internal.elements[element._tweenID]) {
-			Internal.elements[element._tweenID][0].paused = true;
-		}
-
-		return this;
-	},
-
-	resumeElement: function(element){
-		if (_typeOf(element) === 'string') {
-			element = document.getElementById(element);
-		}
-
-		if (!element && !element._tweenID) {
-			return this;
-		}
-
-		if (Internal.elements[element._tweenID]) {
-			Internal.elements[element._tweenID][0].paused = false;
-		}
-
-		return this;
-	},
-
-	getCurrentAnimation: function(element){
-		if (_typeOf(element) === 'string') {
-			element = document.getElementById(element);
-		}
-
-		if (!element || !element._tweenID) {
-			return null;
-		}
-
-		if (Internal.elements[element._tweenID]) {
-			return Internal.elements[element._tweenID][0];
-		}
-
-		return null;
+		return Internal.setupTween.apply(Internal, args);
 	}
 
 };
 
-Animator.parseCSSFunctionString = function(string){
-	var x, styles, transforms, match;
+Animator = {
 
-	if (
-		_typeOf(string) !== 'string' ||
-		!REGEX.containsCSSFunc.test(string)
-	) {
-		return undefined;
+	Animations: {},
+	Scenes: {},
+
+	runScene: function(scene) {
+		var queue = new Animator.Queue();
+		queue.addScene(scene);
+		return queue.start();
+	},
+
+	springElement: function(){
+		var queue = new Animator.Queue();
+		queue.addSpring.apply(queue, arguments);
+		return queue.start();
+	},
+
+	tweenElement: function(){
+		var queue = new Animator.Queue();
+		queue.addTween.apply(queue, arguments);
+		return queue.start();
+	},
+
+	animateElement: function(){
+		var queue = new Animator.Queue();
+		queue.addAnimation.apply(this, arguments);
+		return queue.start();
+	},
+
+	createAnimation: function(name, keyframes){
+		var frame, previousFrame;
+
+		if (
+			_typeOf(name)      !== 'string' ||
+			_typeOf(keyframes) !== 'object'
+		) {
+			return this;
+		}
+
+		for (frame in keyframes) {
+			keyframes[frame] = Internal.convertFrame(keyframes[frame], previousFrame);
+			previousFrame = keyframes[frame];
+		}
+
+		Animator.Animations[name] = keyframes;
+
+		return this;
+	},
+
+	createScene: function(name, scene){
+		if (_typeOf(name) !== 'string') {
+			return this;
+		}
+		if (_typeOf(scene) === 'object') {
+			scene = [scene];
+		}
+		if (_typeOf(scene) !== 'array') {
+			return this;
+		}
+		Animator.Scenes[name] = scene;
+		return this;
+	},
+
+	parseCSSFunctionString: function(string){
+		var x, styles, transforms, match;
+
+		if (
+			_typeOf(string) !== 'string' ||
+			!REGEX.containsCSSFunc.test(string)
+		) {
+			return undefined;
+		}
+
+		// Clean out whitespace and add split separator
+		string = string
+			.replace(REGEX.replaceSpace, '')
+			.replace(REGEX.replacePipe, ')|');
+
+		styles = string.split('|');
+		transforms = {};
+
+		for (x = 0; x < styles.length; x++) {
+			match = styles[x].match(REGEX.parseCSSFunction);
+			if (!match || match.length <= 2) {
+				continue;
+			}
+
+			transforms[match[1]] = match[2].split(',');
+		}
+
+		return transforms;
+	},
+
+	// Find the appropriate vendored prefix for the given
+	// css prop. The non-prefixed prop will ALWAYS be preferred
+	// If nothing can be found, the original prop is returned.
+	findPrefix: function(prop){
+		var toTest = ['webkit', 'moz', 'ms', 'o'], i, joined;
+
+		toTest.unshift(prop);
+		prop = prop.charAt(0).toUpperCase() + prop.slice(1);
+
+		for (i = 0; i < toTest.length; i++) {
+			if (i === 0) {
+				joined = toTest[i];
+			} else {
+				joined = toTest[i] + prop;
+			}
+			if (document.body.style[joined] !== undefined) {
+				return joined;
+			}
+		}
+
+		return prop.toLowerCase();
+	},
+
+	TWEENS: {
+
+		LINEAR: function (t, b, c, d) {
+			return c * t / d + b;
+		},
+
+		EASE_IN_SINE: function (t, b, c, d) {
+			return c * (1 - Math.cos(t / d * (Math.PI / 2))) + b;
+		},
+
+		EASE_OUT_SINE: function (t, b, c, d) {
+			return c * Math.sin(t / d * (Math.PI / 2)) + b;
+		},
+
+		EASE_IN_OUT_SINE: function (t, b, c, d) {
+			return c / 2 * (1 - Math.cos(Math.PI * t / d)) + b;
+		},
+
+		EASE_IN_QUAD: function (t, b, c, d) {
+			return c * (t /= d) * t + b;
+		},
+
+		EASE_OUT_QUAD: function (t, b, c, d) {
+			return -c * (t /= d) * (t - 2) + b;
+		},
+
+		EASE_IN_OUT_QUAD: function (t, b, c, d) {
+			if ((t /= d / 2) < 1) {
+				return c / 2 * t * t + b;
+			}
+			return -c / 2 * ((--t) * (t - 2) - 1) + b;
+		},
+
+		EASE_IN_CIRC: function (t, b, c, d) {
+			return c * (1 - Math.sqrt(1 - (t /= d) * t)) + b;
+		},
+
+		EASE_OUT_CIRC: function (t, b, c, d) {
+			return c * Math.sqrt(1 - (t = t / d - 1) * t) + b;
+		},
+
+		EASE_IN_OUT_CIRC: function (t, b, c, d) {
+			if ((t /= d / 2) < 1) {
+				return c / 2 * (1 - Math.sqrt(1 - t * t)) + b;
+			}
+			return c / 2 * (Math.sqrt(1 - (t -= 2) * t) + 1) + b;
+		},
+
+		EASE_IN_EXPO: function (t, b, c, d) {
+			return c * Math.pow(2, 10 * (t / d - 1)) + b;
+		},
+
+		EASE_OUT_EXPO: function (t, b, c, d) {
+			return c * (-Math.pow(2, -10 * t / d) + 1) + b;
+		},
+
+		EASE_IN_OUT_EXPO: function (t, b, c, d) {
+			if ((t /= d / 2) < 1) {
+				return c / 2 * Math.pow(2, 10 * (t - 1)) + b;
+			}
+			return c / 2 * (-Math.pow(2, -10 * --t) + 2) + b;
+		},
+
+		EASE_IN_QUINT: function (t, b, c, d) {
+			return c * Math.pow (t / d, 5) + b;
+		},
+
+		EASE_OUT_QUINT: function (t, b, c, d) {
+			return c * (Math.pow (t / d - 1, 5) + 1) + b;
+		},
+
+		EASE_IN_OUT_QUINT: function (t, b, c, d) {
+			if ((t /= d / 2) < 1) {
+				return c / 2 * Math.pow (t, 5) + b;
+			}
+			return c / 2 * (Math.pow (t -2, 5) + 2) + b;
+		},
+
+		EASE_IN_QUART: function (t, b, c, d) {
+			return c * Math.pow (t / d, 4) + b;
+		},
+
+		EASE_OUT_QUART: function (t, b, c, d) {
+			return -c * (Math.pow (t / d - 1, 4) - 1) + b;
+		},
+
+		EASE_IN_OUT_QUART: function (t, b, c, d) {
+			if ((t /= d / 2) < 1) {
+				return c / 2 * Math.pow (t, 4) + b;
+			}
+			return -c / 2 * (Math.pow (t - 2, 4) - 2) + b;
+		},
+
+		EASE_IN_CUBIC: function (t, b, c, d) {
+			return c * Math.pow (t / d, 3) + b;
+		},
+
+		EASE_OUT_CUBIC: function (t, b, c, d) {
+			return c * (Math.pow(t / d - 1, 3) + 1) + b;
+		},
+
+		EASE_IN_OUT_CUBIC: function (t, b, c, d) {
+			if ((t /= d / 2) < 1) {
+				return c / 2 * Math.pow (t, 3) + b;
+			}
+			return c / 2 * (Math.pow (t - 2, 3) + 2) + b;
+		}
 	}
 
-	// Clean out whitespace and add split separator
-	string = string
-		.replace(REGEX.replaceSpace, '')
-		.replace(REGEX.replacePipe, ')|');
-
-	styles = string.split('|');
-	transforms = {};
-
-	for (x = 0; x < styles.length; x++) {
-		match = styles[x].match(REGEX.parseCSSFunction);
-		if (!match || match.length <= 2) {
-			continue;
-		}
-
-		transforms[match[1]] = match[2].split(',');
-	}
-
-	return transforms;
-};
-
-// Find the appropriate vendored prefix for the given
-// css prop. The non-prefixed prop will ALWAYS be preferred
-// If nothing can be found, the original prop is returned.
-Animator.findPrefix = function(prop){
-	var toTest = ['webkit', 'moz', 'ms', 'o'], i, joined;
-
-	toTest.unshift(prop);
-	prop = prop.charAt(0).toUpperCase() + prop.slice(1);
-
-	for (i = 0; i < toTest.length; i++) {
-		if (i === 0) {
-			joined = toTest[i];
-		} else {
-			joined = toTest[i] + prop;
-		}
-		if (document.body.style[joined] !== undefined) {
-			return joined;
-		}
-	}
-
-	return prop.toLowerCase();
-};
-
-Animator.TWEENS = {
-
-	LINEAR: function (t, b, c, d) {
-		return c * t / d + b;
-	},
-
-	EASE_IN_SINE: function (t, b, c, d) {
-		return c * (1 - Math.cos(t / d * (Math.PI / 2))) + b;
-	},
-
-	EASE_OUT_SINE: function (t, b, c, d) {
-		return c * Math.sin(t / d * (Math.PI / 2)) + b;
-	},
-
-	EASE_IN_OUT_SINE: function (t, b, c, d) {
-		return c / 2 * (1 - Math.cos(Math.PI * t / d)) + b;
-	},
-
-	EASE_IN_QUAD: function (t, b, c, d) {
-		return c * (t /= d) * t + b;
-	},
-
-	EASE_OUT_QUAD: function (t, b, c, d) {
-		return -c * (t /= d) * (t - 2) + b;
-	},
-
-	EASE_IN_OUT_QUAD: function (t, b, c, d) {
-		if ((t /= d / 2) < 1) {
-			return c / 2 * t * t + b;
-		}
-		return -c / 2 * ((--t) * (t - 2) - 1) + b;
-	},
-
-	EASE_IN_CIRC: function (t, b, c, d) {
-		return c * (1 - Math.sqrt(1 - (t /= d) * t)) + b;
-	},
-
-	EASE_OUT_CIRC: function (t, b, c, d) {
-		return c * Math.sqrt(1 - (t = t / d - 1) * t) + b;
-	},
-
-	EASE_IN_OUT_CIRC: function (t, b, c, d) {
-		if ((t /= d / 2) < 1) {
-			return c / 2 * (1 - Math.sqrt(1 - t * t)) + b;
-		}
-		return c / 2 * (Math.sqrt(1 - (t -= 2) * t) + 1) + b;
-	},
-
-	EASE_IN_EXPO: function (t, b, c, d) {
-		return c * Math.pow(2, 10 * (t / d - 1)) + b;
-	},
-
-	EASE_OUT_EXPO: function (t, b, c, d) {
-		return c * (-Math.pow(2, -10 * t / d) + 1) + b;
-	},
-
-	EASE_IN_OUT_EXPO: function (t, b, c, d) {
-		if ((t /= d / 2) < 1) {
-			return c / 2 * Math.pow(2, 10 * (t - 1)) + b;
-		}
-		return c / 2 * (-Math.pow(2, -10 * --t) + 2) + b;
-	},
-
-	EASE_IN_QUINT: function (t, b, c, d) {
-		return c * Math.pow (t / d, 5) + b;
-	},
-
-	EASE_OUT_QUINT: function (t, b, c, d) {
-		return c * (Math.pow (t / d - 1, 5) + 1) + b;
-	},
-
-	EASE_IN_OUT_QUINT: function (t, b, c, d) {
-		if ((t /= d / 2) < 1) {
-			return c / 2 * Math.pow (t, 5) + b;
-		}
-		return c / 2 * (Math.pow (t -2, 5) + 2) + b;
-	},
-
-	EASE_IN_QUART: function (t, b, c, d) {
-		return c * Math.pow (t / d, 4) + b;
-	},
-
-	EASE_OUT_QUART: function (t, b, c, d) {
-		return -c * (Math.pow (t / d - 1, 4) - 1) + b;
-	},
-
-	EASE_IN_OUT_QUART: function (t, b, c, d) {
-		if ((t /= d / 2) < 1) {
-			return c / 2 * Math.pow (t, 4) + b;
-		}
-		return -c / 2 * (Math.pow (t - 2, 4) - 2) + b;
-	},
-
-	EASE_IN_CUBIC: function (t, b, c, d) {
-		return c * Math.pow (t / d, 3) + b;
-	},
-
-	EASE_OUT_CUBIC: function (t, b, c, d) {
-		return c * (Math.pow(t / d - 1, 3) + 1) + b;
-	},
-
-	EASE_IN_OUT_CUBIC: function (t, b, c, d) {
-		if ((t /= d / 2) < 1) {
-			return c / 2 * Math.pow (t, 3) + b;
-		}
-		return c / 2 * (Math.pow (t - 2, 3) + 2) + b;
-	}
 };
 
 // CSS Animation shortcuts...
 Animator.TWEENS.EASE_IN     = Animator.TWEENS.EASE_IN_SINE;
 Animator.TWEENS.EASE_OUT    = Animator.TWEENS.EASE_OUT_SINE;
 Animator.TWEENS.EASE_IN_OUT = Animator.TWEENS.EASE_IN_OUT_SINE;
+
+Animator.Queue = function(){
+	this._queue = [];
+};
+
+Animator.Queue.prototype = {
+
+	isRunning: function(){
+		var index = Internal.animating.indexOf(this._queue);
+		if (index >= 0) {
+			return true;
+		} else {
+			return false;
+		}
+	},
+
+	addScene: function(id){
+		var scene = Internal.setupScene(id);
+		this._queue.push(scene);
+		return this;
+	},
+
+	addDelay: function(duration, callback){
+		var delay = Internal.setupDelay(duration, callback);
+		this._queue.push(delay);
+		return this;
+	},
+
+	addSpring: function(element, settings){
+		// Springs are a bit funny - since we allow them to be changed
+		// inline, we don't duplicate the format of the other functions
+		Internal.setupSpring(element, settings, this._queue);
+		return this;
+	},
+
+	addTween: function(element, duration){
+		var tween = Internal.setupTween.apply(Internal, arguments);
+		this._queue.push(tween);
+		return this;
+	},
+
+	addAnimation: function(element, animation, duration, finished){
+		var anim = Internal.setupAnimation(element, animation, duration, finished);
+		this._queue.push.apply(this._queue, anim);
+		return this;
+	},
+
+	start: function(){
+		if (this.isRunning() || !this._queue.length) {
+			return this;
+		}
+
+		Internal.addQueue(this._queue);
+		return this;
+	},
+
+	stop: function(){
+		this.clearQueue();
+		return this;
+	},
+
+	pause: function(){
+		if (!this._queue.length) {
+			return this;
+		}
+		this._queue[0].paused = true;
+		this.paused = true;
+		return this;
+	},
+
+	resume: function(){
+		if (!this._queue.length) {
+			return this;
+		}
+		this._queue[0].paused = false;
+		this.paused = false;
+		return this;
+	},
+
+	clearCurrent: function(){
+		this._queue.shift();
+		return this;
+	},
+
+	clearQueue: function(element){
+		this._queue.length = 0;
+		return this;
+	},
+
+	getCurrentAnimation: function(){
+		if (!this._queue.length) {
+			return null;
+		}
+		return this._queue[0];
+	}
+
+};
 
 return Animator;
 

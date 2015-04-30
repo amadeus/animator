@@ -4,16 +4,6 @@ A tiny, standalone, universal high performance animation library for CSS.  The A
 mostly JSON and mimics the CSS Animation API.  Currently Animator supports
 tweens, keyframed animations and springs.
 
-## Example Usage
-
-First you need to create an instance of `Animator`.  This instance is used to
-trigger and store all tweens, animations, springs, etc.
-
-
-```js
-var animatorInstance = new Animator();
-```
-
 ### Basic Tween
 
 A basic tween is quite simple.  You just need to provide an element, a duration
@@ -22,7 +12,7 @@ optionally provide a `from` state.  If no `from` state is provided, Animator
 will figure out the current state of the element.
 
 ```js
-animatorInstance.tweenElement('element-id', 300, {
+Animator.tweenElement('element-id', 300, {
     opacity: 0,
     transform: {
         translate3d: [0, '50%', 0]
@@ -31,10 +21,6 @@ animatorInstance.tweenElement('element-id', 300, {
     console.log('This method will be fired at the end of the tween');
 });
 ```
-
-Any subsequent calls to `.tweenElement` on the same element will be
-automatically queued.
-
 
 ### Keyframe Animation Example
 
@@ -46,7 +32,7 @@ for an element with a duration of your choice.
 // Creates the animation - each key must be digit like,
 // and it represents a percentage of the animation.
 // We named the animation 'pop', so it can be referenced later
-animator.addAnimation('pop', {
+Animator.createAnimation('pop', {
     '0': {
         backgroundColor: {
             rgba: [255,0,0,1]
@@ -84,8 +70,68 @@ animator.addAnimation('pop', {
 
 // We tell animator to fire the 'pop' animation we just defined
 // with a duration of 1 second
-animator.animateElement('element-id', 'pop', 1000)
+Animator.animateElement('element-id', 'pop', 1000)
 ```
+
+
+### Animation Queues
+
+Whenever you call `Animator.tweenElement`, `Animator.animateElement`, or
+`Animator.springElement`, the return object is a queue instance that can be
+added to.  This queue can be used to add further animations that are chained
+together.
+
+```js
+// This animation will start taking place immediately
+var queue = Animator.tweenElement('element-id', 300, {
+    opacity: 0,
+    transform: {
+        translate3d: [0, '50%', 0]
+    }
+}, function(){
+    console.log('This method will be fired at the end of the tween');
+});
+
+// This will force the animation to wait 300ms after the animation above
+queue.addDelay(300);
+
+// This tween will take place after the 300ms delay above
+queue.addTween('element-id', 300, {
+    opacity: 1,
+    transform: {
+        translate3d: [0, '0%', 0]
+    }
+})
+```
+
+You can also create animation queue's manually, and queue up everthing and
+choose when to kick things off.
+
+You can also add delays to a queue, to allow pausing between animations.
+Simply provide the duration and an optional callback to fire at the end of the
+duration if you'd like.
+
+```js
+var queue = new Animator.Queue();
+
+queue.addTween('element-id', 300, {
+    height: 20
+});
+
+queue.addTween('element-id', 300, {
+    opacity: 0
+});
+
+queue.addTween('element-id', 300, {
+    opacity: 1,
+    height: 300
+});
+
+// Starts the animation queue, can be called whenever
+queue.start();
+```
+
+You can queue/chain tweens, animations, and springs.
 
 
 ### Spring Animation Example
@@ -94,9 +140,10 @@ Springs as animations don't actually have a clearly defined start and end.  You
 must provide the spring with a referenced object that will be used as target
 for the CSS properties to 'spring towards'.  It may help to take a look at
 `tests/spring.js` to see an example implementation that goes beyond the scope
-of this example.  Spring animations never really have a completion state, you
-just provide a minimum threshold for accelleration that will force the element
-to pin to the target coordinate.
+of this example.  By default, springs will 'end' once they have started moving
+and have reached their target location within the accelleration threshold
+provided.  If you add a `permanent: true` to the settings, then the spring will
+never stop until you explicitly clear it.
 
 ```js
 var target = {
@@ -104,10 +151,11 @@ var target = {
     y: 0
 };
 
-animator.springElement('element-id', {
+var queue = Animator.springElement('element-id', {
     stiffness: 80,
     friction: 15,
     threshold: 0.03,
+    permanent: true,
     target: target,
     styles: {
         transform: {
@@ -115,6 +163,10 @@ animator.springElement('element-id', {
         }
     }
 });
+
+// Since used permanent: true on our spring settings, the spring will never
+// end. To stop the spring at a later time, do the following:
+queue.clearCurrent();
 ```
 
 When you create the spring for the first time, the styles get set to the
@@ -138,6 +190,7 @@ Urls to check out with the grunt server running:
 * `http://localhost:5000/tests/` - tween and animation API examples
 * `http://localhost:5000/tests/spring.html` - spring example
 * `http://localhost:5000/tests/stress.html` - tween stress test
+* `http://localhost:5000/tests/scene.html` - scene examples
 
 
 ## Current Features

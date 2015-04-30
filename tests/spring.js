@@ -2,15 +2,16 @@
 
 var element = document.getElementById('spring');
 
-var animator = new Animator();
+var queue = new Animator.Queue();
 
 var coords = {
 	x: window.innerWidth / 2,
 	y: window.innerHeight / 2
 };
 
-var stiffness = document.getElementById('stiffness');
-var friction  = document.getElementById('friction');
+var stiffness  = document.getElementById('stiffness');
+var friction   = document.getElementById('friction');
+var permanent = document.getElementById('permanent');
 
 var buttonEnable  = document.getElementById('enable-spring');
 var buttonDisable = document.getElementById('disable-spring');
@@ -21,21 +22,23 @@ var setSpring = function(){
 	if (isNaN(stiff) || isNaN(fric)) {
 		return;
 	}
-	animator.springElement(element, {
+	queue.addSpring(element, {
 		stiffness : stiff,
 		friction : fric,
-		threshold : 0.03,
+		threshold : 0.1,
 		target: coords,
+		permanent: permanent.checked,
 		styles: {
 			transform: {
 				translate3d: ['{x}px', '{y}px', '0px']
 			}
 		}
 	});
+	queue.start();
 };
 
 var disableSpring = function(){
-	animator.removeSpring(element);
+	queue.clearCurrent();
 };
 
 document.body.addEventListener('mousemove', function(event){
@@ -50,6 +53,8 @@ friction.addEventListener( 'keyup', setSpring, false);
 
 stiffness.addEventListener('blur', setSpring, false);
 friction.addEventListener( 'blur', setSpring, false);
+
+permanent.addEventListener('change', setSpring, false);
 
 buttonDisable.addEventListener('click', disableSpring, false);
 buttonEnable.addEventListener('click', setSpring, false);
