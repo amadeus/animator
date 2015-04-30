@@ -221,6 +221,7 @@ Internal = {
 			return;
 		}
 
+		Internal.generateFromTweens(queue[0]);
 		this.animating.push(queue);
 		this.start();
 	},
@@ -1211,10 +1212,6 @@ Animator.Queue.prototype = {
 	start: function(){
 		if (this.isRunning() || !this._queue.length) {
 			return this;
-		}
-
-		if (this._queue.length) {
-			Internal.generateFromTweens(this._queue[0]);
 		}
 
 		Internal.addQueue(this._queue);
