@@ -22,17 +22,38 @@
 		}
 
 		.block {
+			position:relative;
 			display:block;
 			margin:0 auto;
 			width:300px;
 			height:180px;
 			background-color:rgba(255,0,150,1);
 			opacity:0;
+			z-index:1;
+		}
+
+		.spring {
+			position:absolute;
+			width:20px;
+			height:20px;
+			top:0;
+			left:0;
+			margin:-10px 0 0 -10px;
+			opacity:0.5;
+			z-index:0;
+			background-color:rgba(0,0,0,1);
+
+			-webkit-border-radius:10px;
+			   -moz-border-radius:10px;
+			    -ms-border-radius:10px;
+			     -o-border-radius:10px;
+			        border-radius:10px;
 		}
 	</style>
 </head>
 <body>
-	<div class="block" id="first"></div>
+	<div class="block" id="block"></div>
+	<div class="spring" id="spring"></div>
 	<script src="/src/animator.js" type="text/javascript"></script>
 	<script src="/tests/scene.js" type="text/javascript"></script>
 </body>

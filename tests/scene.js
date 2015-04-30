@@ -1,5 +1,10 @@
 (function(){
 
+var coords = {
+	x: window.innerWidth / 2,
+	y: window.innerHeight / 2
+};
+
 var popin = {
 	0: {
 		opacity: 0,
@@ -39,10 +44,10 @@ var scene = [
 			}
 		}
 	}, {
-		start: 200,
+		start: 400,
 		queue: [
 			{
-				element: 'first',
+				element: 'block',
 				duration: 300,
 				animation: 'popin'
 			}, {
@@ -50,9 +55,9 @@ var scene = [
 			}
 		]
 	}, {
-		start: 200,
+		start: 400,
 		queue: {
-			element: 'first',
+			element: 'block',
 			duration:300,
 			from: {
 				opacity: 0
@@ -61,6 +66,33 @@ var scene = [
 				opacity: 1
 			}
 		}
+	}, {
+		start: 0,
+		queue: [
+			{
+				duration: 700,
+				_finished: function(){
+					document.body.addEventListener('mousemove', function(event){
+						coords.x = event.clientX;
+						coords.y = event.clientY;
+					}, false);
+				}
+			}, {
+				element: 'spring',
+				spring: {
+					stiffness : 200,
+					friction : 15,
+					threshold : 0.1,
+					target: coords,
+					permanent: true,
+					styles: {
+						transform: {
+							translate3d: ['{x}px', '{y}px', '0px']
+						}
+					}
+				}
+			}
+		]
 	}
 ];
 
@@ -69,7 +101,7 @@ var pulseScene = [
 		start: 0,
 		queue: [
 			{
-				element: 'first',
+				element: 'block',
 				duration: 150,
 				from: {
 					transform: {
@@ -83,7 +115,7 @@ var pulseScene = [
 					}
 				}
 			}, {
-				element: 'first',
+				element: 'block',
 				duration: 400,
 				from: {
 					transform: {
