@@ -187,8 +187,8 @@ previously.
 You build Scenes in a very similar way to Animations.  First you define them in
 their JSON format, and then you can run them or add them to queues as usual.
 
-In their simplest form, Scenes are just Queues that you can make start at
-specific time intervals.
+In their simplest form, Scenes are just definitions of Queues that can be
+kicked off whenever, including in parallel.
 
 ```js
 var scene = [
