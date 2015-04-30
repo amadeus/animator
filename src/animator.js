@@ -886,8 +886,8 @@ Internal = {
 
 				if (!animRef.element && animRef.duration) {
 					anim = Internal.setupDelay(
-						item.duration,
-						item.callback
+						animRef.duration,
+						animRef._finished
 					);
 				} else if (animRef.element && animRef.to) {
 					anim = Internal.setupTweenFromObject(animRef);
@@ -900,8 +900,8 @@ Internal = {
 					);
 				} else if (animRef.element && animRef.spring) {
 					anim = Internal.setupSpring(
-						item.element,
-						item.settings
+						animRef.element,
+						animRef.spring
 					);
 				} else if (animRef.scene) {
 					anim = Internal.setupScene(animRef.scene);
