@@ -208,8 +208,7 @@ Internal = {
 	},
 
 	run: function(){
-		var animating = Internal.animating,
-			a, anim, now, done, tick;
+		var now, tick;
 
 		if (window.stats) {
 			window.stats.begin();
@@ -223,11 +222,29 @@ Internal = {
 
 		tick = now - Internal._last;
 
-		for (a = 0; a < animating.length;) {
-			anim = animating[a][0];
+		Internal.iterate(Internal.animating, tick);
+
+		if (window.stats) {
+			window.stats.end();
+		}
+
+		if (!Internal.isRunning) {
+			Internal._last = undefined;
+			return;
+		}
+
+		Internal._last = now;
+		_requestAnimationFrame(Internal.run);
+	},
+
+	iterate: function(queues, tick){
+		var a, anim, done;
+
+		for (a = 0; a < queues.length;) {
+			anim = queues[a][0];
 
 			if (!anim) {
-				animating.splice(a, 1);
+				queues.splice(a, 1);
 				continue;
 			}
 
@@ -253,9 +270,9 @@ Internal = {
 				if (anim._finished) {
 					anim._finished(anim);
 				}
-				animating[a].splice(0, 1);
-				if (animating[a].length) {
-					Internal.generateFromTweens(animating[a][0]);
+				queues[a].splice(0, 1);
+				if (queues[a].length) {
+					Internal.generateFromTweens(queues[a][0]);
 				}
 				continue;
 			}
@@ -264,17 +281,6 @@ Internal = {
 
 		anim  = undefined;
 
-		if (window.stats) {
-			window.stats.end();
-		}
-
-		if (!Internal.isRunning) {
-			Internal._last = undefined;
-			return;
-		}
-
-		Internal._last = now;
-		_requestAnimationFrame(Internal.run);
 	},
 
 	generateFromTweens: function(anim){
