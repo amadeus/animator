@@ -209,7 +209,7 @@ Internal = {
 
 	run: function(){
 		var animating = Internal.animating,
-			a, b, anim, anims, now, done, tick;
+			a, anim, now, done, tick;
 
 		if (window.stats) {
 			window.stats.begin();
@@ -224,60 +224,45 @@ Internal = {
 		tick = now - Internal._last;
 
 		for (a = 0; a < animating.length;) {
-			anims = animating[a][0];
+			anim = animating[a][0];
 
-			if (!anims) {
+			if (!anim) {
 				animating.splice(a, 1);
 				continue;
 			}
 
-			for (b = 0; b < anims.length;) {
-				anim = anims[b];
-
-				if (anim.paused) {
-					b += 1;
-					continue;
-				}
-
-				done = anim.update(tick);
-
-				if (done && !anim.permanent) {
-					if (anim.to) {
-						if (anim.to._onFrame) {
-							anim.to._onFrame(anim);
-						}
-						if (anim.to._finished) {
-							anim.to._finished(anim);
-						}
-					}
-					if (anim._onFrame) {
-						anim._onFrame(anim);
-					}
-					if (anim._finished) {
-						anim._finished(anim);
-					}
-
-					anims.splice(b, 1);
-
-					continue;
-				}
-				b += 1;
+			if (anim.paused) {
+				a += 1;
+				continue;
 			}
 
-			if (!anims.length) {
+			done = anim.update(tick);
+
+			if (done && !anim.permanent) {
+				if (anim.to) {
+					if (anim.to._onFrame) {
+						anim.to._onFrame(anim);
+					}
+					if (anim.to._finished) {
+						anim.to._finished(anim);
+					}
+				}
+				if (anim._onFrame) {
+					anim._onFrame(anim);
+				}
+				if (anim._finished) {
+					anim._finished(anim);
+				}
 				animating[a].splice(0, 1);
-				if (!animating[a].length) {
-					animating.splice(a, 1);
-					continue;
-				} else {
+				if (animating[a].length) {
 					Internal.generateFromTweens(animating[a][0]);
 				}
+				continue;
 			}
 			a += 1;
 		}
 
 		anim  = undefined;
-		anims = undefined;
 
 		if (window.stats) {
 			window.stats.end();
@@ -292,18 +277,13 @@ Internal = {
 		_requestAnimationFrame(Internal.run);
 	},
 
-	generateFromTweens: function(group){
-		var x, anim;
-
-		if (!group) {
+	generateFromTweens: function(anim){
+		if (!anim) {
 			return;
 		}
 
-		for (x = 0; x < group.length; x++) {
-			anim = group[x];
-			if (anim && anim.type === 'tween' && !anim.from) {
-				anim.from = Internal.getFromTween(anim.element, anim.to);
-			}
+		if (anim && anim.type === 'tween' && !anim.from) {
+			anim.from = Internal.getFromTween(anim.element, anim.to);
 		}
 	},
 
@@ -486,7 +466,7 @@ Internal = {
 				duration : ((duration * toPercent) - (duration * fromPercent)) >> 0
 			};
 
-			queue.push([tween]);
+			queue.push(tween);
 
 			from = to;
 			fromPercent = toPercent;
@@ -688,17 +668,15 @@ Internal = {
 	},
 
 	setupSpring: function(queue, element, settings){
-		var name, previousSettings, x, y;
+		var name, previousSettings, x;
 
 		for (x = 0; x < queue.length; x++) {
-			for (y = 0; y < queue[x].length; y++) {
-				if (
-					queue[x][y].type === 'spring' &&
-					queue[x][y].element === element
-				) {
-					previousSettings = queue[x][y];
-					break;
-				}
+			if (
+				queue[x].type === 'spring' &&
+				queue[x].element === element
+			) {
+				previousSettings = queue[x];
+				break;
 			}
 		}
 
@@ -728,7 +706,7 @@ Internal = {
 		}
 
 		settings.element = element;
-		queue.push([settings]);
+		queue.push(settings);
 	}
 
 };
@@ -966,7 +944,7 @@ Animator.Queue.prototype = {
 			duration  : parseInt(duration, 10) || 0,
 			_finished : callback
 		};
-		this._queue.push([delay]);
+		this._queue.push(delay);
 		return this;
 	},
 
@@ -1025,7 +1003,7 @@ Animator.Queue.prototype = {
 			tween.to._finished = callback;
 		}
 
-		this._queue.push([tween]);
+		this._queue.push(tween);
 
 		return this;
 	},
@@ -1075,30 +1053,20 @@ Animator.Queue.prototype = {
 	},
 
 	pause: function(){
-		var x;
 		if (!this._queue.length) {
 			return this;
 		}
-
-		for (x = 0; x < this._queue[0].length; x++) {
-			this._queue[0][x].paused = true;
-		}
+		this._queue[0].paused = true;
 		this.paused = true;
-
 		return this;
 	},
 
 	resume: function(){
-		var x;
 		if (!this._queue.length) {
 			return this;
 		}
-
-		for (x = 0; x < this._queue[0].length; x++) {
-			this._queue[0][x].paused = false;
-		}
+		this._queue[0].paused = false;
 		this.paused = false;
-
 		return this;
 	},
 
@@ -1116,7 +1084,6 @@ Animator.Queue.prototype = {
 		if (!this._queue.length) {
 			return null;
 		}
-
 		return this._queue[0];
 	}
 
