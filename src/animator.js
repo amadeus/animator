@@ -272,6 +272,7 @@ Internal = {
 
 		for (a = 0; a < queues.length;) {
 			anim = queues[a][0];
+			done = undefined;
 
 			if (!anim) {
 				queues.splice(a, 1);
@@ -521,27 +522,30 @@ Internal = {
 		return queue;
 	},
 
-	getValueAndUnits: function(items, prop){
-		var value, unit, x, match;
+	getValueAndUnits: function(itemsRef, prop){
+		var items, value, unit, x, match;
 
 		if (REGEX.startsWith.test(prop)) {
-			return items;
+			return itemsRef;
 		}
 
 		if (
-			_typeOf(items) !== 'number' &&
-			_typeOf(items) !== 'string' &&
-			_typeOf(items) !== 'array'
+			_typeOf(itemsRef) !== 'number' &&
+			_typeOf(itemsRef) !== 'string' &&
+			_typeOf(itemsRef) !== 'array'
 		) {
-			return items;
+			return itemsRef;
 		}
 
-		if (_typeOf(items) === 'string') {
-			items = items.split(' ');
-		}
-
-		if (_typeOf(items) !== 'array') {
-			items = [items];
+		if (_typeOf(itemsRef) === 'string') {
+			items = itemsRef.split(' ');
+		} else if (_typeOf(itemsRef) !== 'array') {
+			items = [itemsRef];
+		} else {
+			items = [];
+			for (x = 0; x < itemsRef.length; x++) {
+				items[x] = itemsRef[x];
+			}
 		}
 
 		for (x = 0; x < items.length; x += 2) {
@@ -906,7 +910,11 @@ Internal = {
 				if (!anim) {
 					continue;
 				}
-				item.queue.push(anim);
+				if (_typeOf(anim) === 'array') {
+					item.queue.push.apply(item.queue, anim);
+				} else {
+					item.queue.push(anim);
+				}
 			}
 			if (item.queue.length) {
 				scene.queues.push(item);
