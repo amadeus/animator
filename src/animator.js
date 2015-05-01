@@ -1229,7 +1229,7 @@ Animator.Queue.prototype = {
 		return this;
 	},
 
-	addTween: function(element, duration){
+	addTween: function(){
 		var tween = Internal.setupTween.apply(Internal, arguments);
 		this._queue.push(tween);
 		return this;
@@ -1278,7 +1278,7 @@ Animator.Queue.prototype = {
 		return this;
 	},
 
-	clearQueue: function(element){
+	clearQueue: function(){
 		this._queue.length = 0;
 		return this;
 	},
