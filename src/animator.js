@@ -4,7 +4,7 @@
 		module.exports = factory();
 	} else if (typeof define === 'function' && define.amd) {
 		define(
-			'transformer',
+			'animator',
 			[],
 			factory
 		);
