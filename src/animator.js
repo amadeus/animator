@@ -767,7 +767,7 @@ Internal = {
 		}
 
 		for (name in reference.target) {
-			settings.current[name] = reference.target[name];
+			settings.current[name] = (reference.start) ? reference.start[name] : reference.target[name];
 			settings.vel[name]     = 0;
 			settings.accel[name]   = 0;
 		}
