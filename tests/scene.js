@@ -36,13 +36,31 @@ var popin = {
 var scene = [
 	{
 		start: 0,
-		queue: {
-			element: document.body,
-			duration: 700,
-			to: {
-				opacity: 1
+		queue: [
+			{
+				update: function(tick){
+					if (this.counter === undefined) {
+						this.counter = 0;
+					} else {
+						this.counter++;
+					}
+					console.log('Counting - ', this.counter);
+					if (this.counter > 5) {
+						console.log('Just sayin hi before we kick all this off.');
+						console.log('And to give an example of the `method` type');
+						return true;
+					} else {
+						return false;
+					}
+				}
+			}, {
+				element: document.body,
+				duration: 700,
+				to: {
+					opacity: 1
+				}
 			}
-		}
+		]
 	}, {
 		start: 400,
 		queue: [

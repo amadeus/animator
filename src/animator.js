@@ -869,6 +869,13 @@ Internal = {
 		return anim;
 	},
 
+	setupMethod: function(method, finished){
+		return {
+			update    : method,
+			_finished : finished
+		};
+	},
+
 	setupScene: function(sceneSettings){
 		var scene, itemRef, item, anim, animRef, x, y;
 
@@ -930,6 +937,8 @@ Internal = {
 						animRef.element,
 						animRef.spring
 					);
+				} else if (animRef.update) {
+					anim = Internal.setupMethod(animRef.update, animRef._finished);
 				} else if (animRef.scene) {
 					anim = Internal.setupScene(animRef.scene);
 				}
@@ -1216,6 +1225,12 @@ Animator.Queue.prototype = {
 	addScene: function(id){
 		var scene = Internal.setupScene(id);
 		this._queue.push(scene);
+		return this;
+	},
+
+	addMethod: function(method, finished){
+		var obj = Internal.setupMethod(method, finished);
+		this._queue.push(obj);
 		return this;
 	},
 
