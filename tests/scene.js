@@ -106,13 +106,13 @@ var pulseScene = [
 				from: {
 					transform: {
 						scale: [1, 1]
-					},
-					_timing: 'ease-in-out'
+					}
 				},
 				to: {
 					transform: {
 						scale: [1.1, 1.1]
-					}
+					},
+					_timing: 'ease-in-out'
 				}
 			}, {
 				element: 'block',
@@ -120,13 +120,13 @@ var pulseScene = [
 				from: {
 					transform: {
 						scale: [1.1, 1.1]
-					},
-					_timing: 'ease-in-out'
+					}
 				},
 				to: {
 					transform: {
 						scale: [1, 1]
 					},
+					_timing: 'ease-in-out',
 					_finished: function(){
 						Animator.runScene('pulse-scene');
 					}

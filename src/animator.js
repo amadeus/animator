@@ -817,6 +817,9 @@ Internal = {
 		if (frames.length >= 2) {
 			from = Internal.convertFrame(frames[0]);
 			to   = Internal.convertFrame(frames[1], from);
+			if (to._timing) {
+				from._timing = to._timing;
+			}
 		} else {
 			to = Internal.convertFrame(frames[0]);
 		}
