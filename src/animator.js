@@ -105,10 +105,10 @@ updateDelay = function(tick){
 		this.delta += tick;
 	}
 
-	if (this.duration > this.delta) {
-		return false;
-	} else {
+	if (this.delta >= this.duration) {
 		return true;
+	} else {
+		return false;
 	}
 };
 
