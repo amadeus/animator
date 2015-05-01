@@ -718,7 +718,9 @@ Internal = {
 		}
 
 		if (_typeOf(reference) !== 'object') {
-			throw new TypeError('Animator.Queue.addSpring spring settings must be an object: ' + reference);
+			throw new TypeError(
+				'Animator - Internal.setupSpring: spring settings must be an object: ' + reference
+			);
 		}
 
 		if (queue) {
@@ -796,12 +798,14 @@ Internal = {
 			element = document.getElementById(element);
 		}
 		if (_typeOf(element) !== 'element') {
-			throw new Error(
-				'Animator.Queue.addTween: Must provide a valid element to tween: ' + element
+			throw new TypeError(
+				'Animator - Internal.setupTween: Must provide a valid element to tween: ' + element
 			);
 		}
 		if (_typeOf(duration) !== 'number') {
-			throw new TypeError('Animator.Queue.addTween: Must provide a valid duration: ' + duration);
+			throw new TypeError(
+				'Animator - Internal.setupTween: Must provide a valid duration: ' + duration
+			);
 		}
 
 		frames = Array.prototype.slice.call(arguments, 2);
@@ -839,13 +843,17 @@ Internal = {
 		}
 
 		if (_typeOf(element) !== 'element') {
-			throw new Error('Animator.Queue.addAnimation: Must provide a valid element to animate: ' + element);
+			throw new TypeError(
+				'Animator - Internal.setupAnimation: Must provide a valid element to animate: ' + element
+			);
 		}
 
 		duration = duration || 1000;
 
 		if (!Animator.Animations[animation]) {
-			throw new Error('Animator.Queue.addAnimation: Animation does not exist: ' + animation);
+			throw new Error(
+				'Animator - Internal.setupAnimation: Animation does not exist: ' + animation
+			);
 		}
 
 		var anim = Internal.keyframesToTweens(
@@ -866,7 +874,9 @@ Internal = {
 		}
 
 		if (_typeOf(sceneSettings) !== 'array') {
-			throw new Error('Internal.setupScene: Not valid scene - ' + sceneSettings);
+			throw new TypeError(
+				'Animator - Internal.setupScene: Not valid scene - ' + sceneSettings
+			);
 		}
 
 		scene = {
@@ -880,7 +890,9 @@ Internal = {
 			itemRef = sceneSettings[x];
 
 			if (!itemRef || !itemRef.queue) {
-				throw new Error('Animator - Internal.setupScene: Invalid item - ' + itemRef);
+				throw new Error(
+					'Animator - Internal.setupScene: Invalid item - ' + itemRef
+				);
 			}
 			if (_typeOf(itemRef.queue) !== 'array') {
 				itemRef.queue = [itemRef.queue];
