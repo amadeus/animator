@@ -876,7 +876,7 @@ Internal = {
 		};
 	},
 
-	setupScene: function(sceneSettings){
+	setupScene: function(sceneSettings, finished){
 		var scene, itemRef, item, anim, animRef, x, y;
 
 		if (_typeOf(sceneSettings) === 'string') {
@@ -893,7 +893,8 @@ Internal = {
 			type    : 'scene',
 			update  : updateScene,
 			queues  : [],
-			running : []
+			running : [],
+			_finished: finished
 		};
 
 		for (x = 0; x < sceneSettings.length; x++) {
@@ -980,9 +981,9 @@ Animator = {
 	Animations: {},
 	Scenes: {},
 
-	runScene: function(scene) {
+	runScene: function(scene, finished) {
 		var queue = new Animator.Queue();
-		queue.addScene(scene);
+		queue.addScene(scene, finished);
 		return queue.start();
 	},
 
@@ -1222,8 +1223,8 @@ Animator.Queue.prototype = {
 		}
 	},
 
-	addScene: function(id){
-		var scene = Internal.setupScene(id);
+	addScene: function(id, finished){
+		var scene = Internal.setupScene(id, finished);
 		this._queue.push(scene);
 		return this;
 	},
