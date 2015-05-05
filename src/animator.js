@@ -250,6 +250,9 @@ Internal = {
 		}
 
 		tick = now - Internal._last;
+		if (Internal.clamp) {
+			tick = Math.min(tick, Internal.clamp);
+		}
 
 		Internal.iterate(Internal.animating, tick);
 
@@ -980,6 +983,17 @@ Animator = {
 
 	Animations: {},
 	Scenes: {},
+
+	setClamp: function(clamp){
+		if (_typeOf(clamp) !== 'number') {
+			throw new TypeError('Animator.setClamp: Clamp must be a number: ' + clamp);
+		}
+		if (clamp <= 16 && clamp !== 0) {
+			throw new Error('Animator.setClamp: Clamp must be greater than 16 or 0: ' + clamp);
+		}
+		Internal.clamp = clamp;
+		return this;
+	},
 
 	runScene: function(scene, finished) {
 		var queue = new Animator.Queue();
