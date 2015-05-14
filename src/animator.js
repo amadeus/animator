@@ -1015,7 +1015,7 @@ Animator = {
 
 	animateElement: function(){
 		var queue = new Animator.Queue();
-		queue.addAnimation.apply(this, arguments);
+		queue.addAnimation.apply(queue, arguments);
 		return queue.start();
 	},
 
