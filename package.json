@@ -1,6 +1,6 @@
 {
   "name": "animatorjs",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "description": "Das Ah-knee-may-tor",
   "main": "src/animator.js",
   "dependencies": {
