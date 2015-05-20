@@ -431,9 +431,9 @@ Internal = {
 			}
 		} else {
 			for (name in items) {
-				value = name + '(';
+				value += name + '(';
 				value += Internal.getSpringStyle(items[name], spring, tick, ',');
-				value += ')';
+				value += ') ';
 			}
 		}
 
