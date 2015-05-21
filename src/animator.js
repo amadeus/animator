@@ -28,7 +28,7 @@ REGEX = {
 	isColorFunc      : /^(rgb|hsl)/,
 	replaceSpace     : /[\ \s]/g,
 	isScale          : /scale/,
-	defaultPixel     : /(translate|perspective|top|left|bottom|right|height|width|margin|padding|border)/,
+	defaultPixel     : /(translate|top|left|bottom|right|height|width|margin|padding|border)/,
 	containsCSSFunc  : /[()]/,
 	parseCSSFunction : /([0-9\w]+)\(([-0-9,.%\w]*)\)/,
 	isTransform      : /[tT]ransform/,
