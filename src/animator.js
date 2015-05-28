@@ -15,7 +15,7 @@
 
 var Animator, REGEX, updateTween, updateDelay, updateSpring, updateScene, Internal, _typeOf,
 	_requestAnimationFrame, _performance, _nowOffset, _dateNow, _getComputedStyle,
-	_toCamelCase;
+	_toCamelCase, _has3d;
 
 REGEX = {
 	digit            : /^[-0-9.]+/,
@@ -473,6 +473,14 @@ Internal = {
 			if (!REGEX.startsWith.test(key)) {
 				key = _toCamelCase(key);
 				key = Animator.findPrefix(key);
+			}
+
+			// Automatically convert translate3d to translate[2d] on browsers
+			// that do not support 3d
+			if (key === 'translate3d' && !_has3d) {
+				key = 'translate';
+				value.pop();
+				value.pop();
 			}
 
 			newObject[key] = value;
@@ -1324,6 +1332,26 @@ Animator.Queue.prototype = {
 	}
 
 };
+
+// Determine transform3d support
+_has3d = (function(){
+	var el = document.createElement('div'),
+		transform = Animator.findPrefix('transform'),
+		style;
+
+	el.style.position   = 'absolute';
+	el.style[transform] = 'translate3d(1px,1px,1px)';
+
+	document.body.appendChild(el);
+	style = _getComputedStyle(el)[transform] || '';
+	document.body.removeChild(el);
+
+	if (style.match(/matrix3d/)) {
+		return true;
+	}
+
+	return false;
+})();
 
 return Animator;
 
