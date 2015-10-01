@@ -152,18 +152,37 @@ updateTween = function(tick){
 };
 
 updateSpring = function(tick){
-	var name, styles, element, isFinished;
+	var name, styles, element, isFinished, mod, t;
 
 	element    = this.element;
 	styles     = this.styles;
 	tick       = tick / 1000;
 
 	for (name in styles) {
-		element.style[name] = Internal.getSpringStyle(
-			styles[name],
-			this,
-			tick
-		);
+		if (Internal.clamp && tick > Internal.clamp) {
+			mod = tick % Internal.clamp;
+			for (t = 0; t < tick / Internal.clamp; t++) {
+				element.style[name] = Internal.getSpringStyle(
+					styles[name],
+					this,
+					Internal.clamp
+				);
+			}
+
+			if (mod) {
+				element.style[name] = Internal.getSpringStyle(
+					styles[name],
+					this,
+					mod
+				);
+			}
+		} else {
+			element.style[name] = Internal.getSpringStyle(
+				styles[name],
+				this,
+				tick
+			);
+		}
 	}
 
 	isFinished = true;
@@ -250,9 +269,6 @@ Internal = {
 		}
 
 		tick = now - Internal._last;
-		if (Internal.clamp) {
-			tick = Math.min(tick, Internal.clamp);
-		}
 
 		Internal.iterate(Internal.animating, tick);
 
