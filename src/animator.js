@@ -1016,7 +1016,8 @@ Animator = {
 		if (clamp <= 16 && clamp !== 0) {
 			throw new Error('Animator.setClamp: Clamp must be greater than 16 or 0: ' + clamp);
 		}
-		Internal.clamp = clamp;
+		// Convert clamp to seconds
+		Internal.clamp = clamp / 1000;
 		return this;
 	},
 
