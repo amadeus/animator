@@ -152,7 +152,7 @@ updateTween = function(tick){
 };
 
 updateSpring = function(tick){
-	var name, styles, element, isFinished, mod, t;
+	var name, styles, element, isFinished, mod, t, ticks;
 
 	element    = this.element;
 	styles     = this.styles;
@@ -161,7 +161,8 @@ updateSpring = function(tick){
 	for (name in styles) {
 		if (Internal.clamp && tick > Internal.clamp) {
 			mod = tick % Internal.clamp;
-			for (t = 0; t < tick / Internal.clamp; t++) {
+			ticks = (tick / Internal.clamp) >> 0;
+			for (t = 0; t < ticks; t++) {
 				element.style[name] = Internal.getSpringStyle(
 					styles[name],
 					this,
