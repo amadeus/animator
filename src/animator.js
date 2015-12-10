@@ -217,7 +217,10 @@ updateScene = function(tick){
 
 	Internal.iterate(this.running, tick);
 
-	if (this.running.length) {
+	// We have to check the length of both queues and running array, in case
+	// there is idle time between queues, or there is no queue but some items
+	// still running
+	if (this.running.length || this.queues.length) {
 		return false;
 	} else {
 		return true;
